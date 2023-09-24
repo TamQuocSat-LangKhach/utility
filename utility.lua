@@ -47,6 +47,83 @@ Utility.getUseExtraTargets = function(room, data, bypass_distances)
   return tos
 end
 
+-- 令两名角色交换手牌
+---@param room Room
+---@param player ServerPlayer @ 移动的操作者（proposer）
+---@param targetOne ServerPlayer @ 移动的目标1玩家
+---@param targetTwo ServerPlayer @ 移动的目标2玩家
+---@param skillName string @ 技能名
+Utility.swapHandCards = function(room, player, targetOne, targetTwo, skillName)
+  local cards1 = table.clone(targetOne.player_cards[Player.Hand])
+  local cards2 = table.clone(targetTwo.player_cards[Player.Hand])
+  local moveInfos = {}
+  if #cards1 > 0 then
+    table.insert(moveInfos, {
+      from = targetOne.id,
+      ids = cards1,
+      toArea = Card.Processing,
+      moveReason = fk.ReasonExchange,
+      proposer = player.id,
+      skillName = skillName,
+    })
+  end
+  if #cards2 > 0 then
+    table.insert(moveInfos, {
+      from = targetTwo.id,
+      ids = cards2,
+      toArea = Card.Processing,
+      moveReason = fk.ReasonExchange,
+      proposer = player.id,
+      skillName = skillName,
+    })
+  end
+  if #moveInfos > 0 then
+    room:moveCards(table.unpack(moveInfos))
+  end
+  moveInfos = {}
+  if not targetTwo.dead then
+    local to_ex_cards = table.filter(cards1, function (id)
+      return room:getCardArea(id) == Card.Processing
+    end)
+    if #to_ex_cards > 0 then
+      table.insert(moveInfos, {
+        ids = to_ex_cards,
+        fromArea = Card.Processing,
+        to = targetTwo.id,
+        toArea = Card.PlayerHand,
+        moveReason = fk.ReasonExchange,
+        proposer = player.id,
+        skillName = skillName,
+      })
+    end
+  end
+  if not targetOne.dead then
+    local to_ex_cards = table.filter(cards2, function (id)
+      return room:getCardArea(id) == Card.Processing
+    end)
+    if #to_ex_cards > 0 then
+      table.insert(moveInfos, {
+        ids = to_ex_cards,
+        fromArea = Card.Processing,
+        to = targetOne.id,
+        toArea = Card.PlayerHand,
+        moveReason = fk.ReasonExchange,
+        proposer = player.id,
+        skillName = skillName,
+      })
+    end
+  end
+  if #moveInfos > 0 then
+    room:moveCards(table.unpack(moveInfos))
+  end
+  table.insertTable(cards1, cards2)
+  local dis_cards = table.filter(cards1, function (id)
+    return room:getCardArea(id) == Card.Processing
+  end)
+  if #dis_cards > 0 then
+    room:moveCardTo(dis_cards, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile, skillName, nil, true, player.id)
+  end
+end
 
 
 
