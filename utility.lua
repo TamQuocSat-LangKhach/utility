@@ -39,7 +39,7 @@ Utility.getUseExtraTargets = function(room, data, bypass_distances)
   local current_targets = TargetGroup:getRealTargets(data.tos)
   for _, p in ipairs(room.alive_players) do
     if not table.contains(current_targets, p.id) and not room:getPlayerById(data.from):isProhibited(p, data.card) then
-      if data.card.skill:modTargetFilter(p.id, {}, data.from, data.card, bypass_distances) then
+      if data.card.skill:modTargetFilter(p.id, {}, data.from, data.card, not bypass_distances) then
         table.insert(tos, p.id)
       end
     end
