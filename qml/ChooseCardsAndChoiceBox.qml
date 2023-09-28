@@ -10,11 +10,11 @@ GraphicsBox {
   id: root
 
   property var selected_ids: []
-  property var all_options: []
+  property var ok_options: []
   property var cards: []
   property var disable_cards: []
   property string prompt
-  property bool view_only: false
+  property var cancel_options: []
 
   title.text: Backend.translate(prompt !== "" ? processPrompt(prompt) : "$ChooseCard")
   // TODO: Adjust the UI design in case there are more than 7 cards
@@ -30,7 +30,7 @@ GraphicsBox {
       autoBack: false
       selectable: !disable_cards.includes(cid)
       onSelectedChanged: {
-        if (view_only) return;
+        if (ok_options.length == 0) return;
 
         if (selected) {
           origY = origY - 20;
@@ -42,7 +42,7 @@ GraphicsBox {
         origX = x;
         goBack(true);
         root.selected_idsChanged();
-        
+
         if (selected)
           root.updateCardSelectable(cid);
       }
@@ -61,48 +61,48 @@ GraphicsBox {
     return raw;
   }
 
-    Rectangle {
-      id: right
+  Rectangle {
+    id: right
+    anchors.fill: parent
+    anchors.topMargin: 40
+    anchors.leftMargin: 15
+    anchors.rightMargin: 15
+    anchors.bottomMargin: 50
+
+    color: "#88EEEEEE"
+    radius: 10
+
+    Flickable {
+      id: flickableContainer
+      ScrollBar.horizontal: ScrollBar {}
+
+      flickableDirection: Flickable.HorizontalFlick
       anchors.fill: parent
-      anchors.topMargin: 40
-      anchors.leftMargin: 15
-      anchors.rightMargin: 15
-      anchors.bottomMargin: 50
-      
-      color: "#88EEEEEE"
-      radius: 10
+      anchors.topMargin: 0
+      anchors.leftMargin: 5
+      anchors.rightMargin: 5
+      anchors.bottomMargin: 10
 
-      Flickable {
-        id: flickableContainer
-        ScrollBar.horizontal: ScrollBar {}
+      contentWidth: cardsList.width
+      contentHeight: cardsList.height
+      clip: true
 
-        flickableDirection: Flickable.HorizontalFlick
-        anchors.fill: parent
-        anchors.topMargin: 0
-        anchors.leftMargin: 5
-        anchors.rightMargin: 5
-        anchors.bottomMargin: 10
+      ColumnLayout {
+        id: cardsList
+        anchors.top: parent.top
+        anchors.topMargin: 25
 
-        contentWidth: cardsList.width
-        contentHeight: cardsList.height
-        clip: true
-
-        ColumnLayout {
-          id: cardsList
-          anchors.top: parent.top
-          anchors.topMargin: 25
-
-          Row {
-            spacing: 5
-            Repeater {
-              id: to_select
-              model: cards
-              delegate: cardDelegate
-            }
+        Row {
+          spacing: 5
+          Repeater {
+            id: to_select
+            model: cards
+            delegate: cardDelegate
           }
         }
       }
     }
+  }
 
   Item {
     id: buttonArea
@@ -116,12 +116,12 @@ GraphicsBox {
       spacing: 8
 
       Repeater {
-        model: all_options
+        model: ok_options
 
         MetroButton {
           Layout.fillWidth: true
           text: processPrompt(modelData)
-          enabled: view_only || root.selected_ids.length == 1
+          enabled: root.selected_ids.length == 1
 
           onClicked: {
             close();
@@ -129,6 +129,28 @@ GraphicsBox {
             const reply = JSON.stringify(
               {
                 cards: root.selected_ids,
+                choice: modelData,
+              }
+            );
+            ClientInstance.replyToServer("", reply);
+          }
+        }
+      }
+
+      Repeater {
+        model: cancel_options
+
+        MetroButton {
+          Layout.fillWidth: true
+          text: processPrompt(modelData)
+          enabled: true
+
+          onClicked: {
+            close();
+            roomScene.state = "notactive";
+            const reply = JSON.stringify(
+              {
+                cards: [],
                 choice: modelData,
               }
             );
@@ -152,9 +174,9 @@ GraphicsBox {
     cards = d[0].map(cid => {
       return JSON.parse(Backend.callLuaFunction("GetCardData", [cid]));
     });
-    all_options = d[1];
+    ok_options = d[1];
     prompt = d[2] ?? "";
-    view_only = d[3] ?? false
+    cancel_options = d[3] ?? []
     disable_cards = d[4] ?? []
   }
 }
