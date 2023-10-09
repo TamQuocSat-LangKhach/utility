@@ -14,6 +14,8 @@ GraphicsBox {
   property var cards: []
   property var disable_cards: []
   property string prompt
+  property int min
+  property int max
   property var cancel_options: []
 
   title.text: Backend.translate(prompt !== "" ? processPrompt(prompt) : "$ChooseCard")
@@ -43,8 +45,7 @@ GraphicsBox {
         goBack(true);
         root.selected_idsChanged();
 
-        if (selected)
-          root.updateCardSelectable(cid);
+        root.updateCardSelectable();
       }
     }
   }
@@ -121,7 +122,7 @@ GraphicsBox {
         MetroButton {
           Layout.fillWidth: true
           text: processPrompt(modelData)
-          enabled: root.selected_ids.length == 1
+          enabled: root.selected_ids.length >= root.min && root.selected_ids.length <= root.max
 
           onClicked: {
             close();
@@ -161,11 +162,16 @@ GraphicsBox {
     }
   }
 
-  function updateCardSelectable(cid) {
-    for (let i = 0; i < cards.length; i++) {
-      const item = to_select.itemAt(i);
-      if (item.selected && item.cid != cid)
-        item.selected = false;
+  function updateCardSelectable() {
+    if (selected_ids.length > max) {
+      let item;
+      for (let i = 0; i < to_select.count; i++) {
+        item = to_select.itemAt(i);
+        if (item.cid == selected_ids[0]) {
+          item.selected = false;
+          break;
+        }
+      }
     }
   }
 
@@ -177,7 +183,9 @@ GraphicsBox {
     ok_options = d[1];
     prompt = d[2] ?? "";
     cancel_options = d[3] ?? []
-    disable_cards = d[4] ?? []
+    min = d[4] ?? 1
+    max = d[5] ?? 1
+    disable_cards = d[6] ?? []
   }
 }
 
