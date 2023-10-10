@@ -80,13 +80,18 @@ GraphicsBox {
           ClientInstance.replyToServer("", JSON.stringify(root.selected));
         }
       }
+
+      MetroButton {
+        id: detailBtn
+        width: 80
+        height: 35
+        text: Backend.translate("Show General Detail")
+        onClicked: roomScene.startCheat("../../packages/utility/qml/SkillDetail", { skills: root.selected.length > 0 ? root.selected : root.active_skills});
+      }
     }
   }
 
   function updateSelectable() {
-
-
-    
     buttonConfirm.enabled = (selected.length <= max && selected.length >= min);
   }
 
