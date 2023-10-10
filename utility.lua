@@ -27,6 +27,25 @@ Utility.getEventsByRule = function(room, eventType, n, func, end_id)
   return ret
 end
 
+-- 一名角色A对角色B使用牌的合法性检测
+---@param room Room
+---@param from ServerPlayer @ 使用来源
+---@param to ServerPlayer @ 目标角色
+---@param card Card @ 被使用的卡牌
+---@param distance_limited boolean|nil @ 是否有距离关系的限制
+---@param times_limited boolean|nil @ 是否有次数限制
+Utility.canUseCardTo = function(room, from, to, card, distance_limited, times_limited)
+  if from:prohibitUse(card) or from:isProhibited(to, card) then return false end
+  if not times_limited then
+    room:setPlayerMark(from, MarkEnum.BypassTimesLimit .. "-tmp", 1)
+  end
+  local can_use = from:canUse(card)
+  if not times_limited then
+    room:setPlayerMark(from, MarkEnum.BypassTimesLimit .. "-tmp", 0)
+  end
+  return can_use and card.skill:modTargetFilter(to.id, {}, from.id, card, distance_limited)
+end
+
 -- 获取使用牌的合法额外目标（【借刀杀人】等带副目标的卡牌除外）
 ---@param room Room
 ---@param data CardUseStruct @ 使用事件的data
@@ -47,15 +66,15 @@ Utility.getUseExtraTargets = function(room, data, bypass_distances)
   return tos
 end
 
--- 令两名角色交换手牌
+-- 令两名角色交换特定的牌（FIXME：暂时只能正面朝上移动过）
 ---@param room Room
 ---@param player ServerPlayer @ 移动的操作者（proposer）
 ---@param targetOne ServerPlayer @ 移动的目标1玩家
 ---@param targetTwo ServerPlayer @ 移动的目标2玩家
+---@param cards1 integer[] @ 从属于目标1的卡牌
+---@param cards2 integer[] @ 从属于目标2的卡牌
 ---@param skillName string @ 技能名
-Utility.swapHandCards = function(room, player, targetOne, targetTwo, skillName)
-  local cards1 = table.clone(targetOne.player_cards[Player.Hand])
-  local cards2 = table.clone(targetTwo.player_cards[Player.Hand])
+Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2, skillName)
   local moveInfos = {}
   if #cards1 > 0 then
     table.insert(moveInfos, {
@@ -123,6 +142,17 @@ Utility.swapHandCards = function(room, player, targetOne, targetTwo, skillName)
   if #dis_cards > 0 then
     room:moveCardTo(dis_cards, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile, skillName, nil, true, player.id)
   end
+end
+
+-- 令两名角色交换手牌（FIXME：暂时只能正面朝上移动过）
+---@param room Room
+---@param player ServerPlayer @ 移动的操作者（proposer）
+---@param targetOne ServerPlayer @ 移动的目标1玩家
+---@param targetTwo ServerPlayer @ 移动的目标2玩家
+---@param skillName string @ 技能名
+Utility.swapHandCards = function(room, player, targetOne, targetTwo, skillName)
+  Utility.swapCards(room, player, targetOne, targetTwo, table.clone(targetOne.player_cards[Player.Hand]),
+  table.clone(targetTwo.player_cards[Player.Hand]), skillName)
 end
 
 
