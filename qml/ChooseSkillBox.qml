@@ -14,7 +14,7 @@ GraphicsBox {
   property int max
   property string prompt
 
-  title.text: Backend.translate(prompt !== "" ? prompt : "$Choice")
+  title.text: Backend.translate(prompt !== "" ? processPrompt(prompt) : "$Choice")
   width: 40 + Math.min(8, Math.max(4, active_skills.length)) * 88
   height: 230
 
