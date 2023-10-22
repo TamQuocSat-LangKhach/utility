@@ -155,6 +155,15 @@ Utility.swapHandCards = function(room, player, targetOne, targetTwo, skillName)
   table.clone(targetTwo.player_cards[Player.Hand]), skillName)
 end
 
+-- 获取角色对应Mark并初始化为table
+---@param player ServerPlayer @ 要被获取标记的那个玩家
+---@param mark string @ 标记
+---@return table
+Utility.getMark = function(player, mark)
+  return type(player:getMark(mark)) == "table" and player:getMark(mark) or {}
+end
+
+
 
 
 
