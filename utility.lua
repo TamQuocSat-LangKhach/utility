@@ -2,7 +2,7 @@
 -- 因为不是拓展包，所以不能用init.lua（否则会被当拓展包加载并报错）
 -- 因为本体里面已经有util了所以命名为完整版utility
 
--- 要使用的话在拓展开头加一句local U = require "packages/utility/utility.lua" 即可
+-- 要使用的话在拓展开头加一句local U = require "packages/utility/utility" 即可(注意别加.lua)
 
 local Utility = {}
 
@@ -162,6 +162,64 @@ end
 Utility.getMark = function(player, mark)
   return type(player:getMark(mark)) == "table" and player:getMark(mark) or {}
 end
+
+
+--- 判断一张牌能否移动至某角色的装备区
+---@param target ServerPlayer @ 接受牌的角色
+---@param cardId integer @ 移动的牌
+---@param convert boolean|nil @ 是否可以替换装备（默认可以）
+---@return boolean 
+Utility.canMoveCardIntoEquip = function(target, cardId, convert)
+  convert = (convert == nil) and true or convert
+  local card = Fk:getCardById(cardId)
+  if not (card.sub_type >= 3 and card.sub_type <= 7) then return false end
+  if target.dead or table.contains(target:getCardIds("e"), cardId) then return false end
+  if target:hasEmptyEquipSlot(card.sub_type) or (#target:getEquipments(card.sub_type) > 0 and convert) then
+    return true
+  end
+  return false
+end
+
+
+--- 将一张牌移动至某角色的装备区，若不合法则置入弃牌堆
+---@param room Room @ 房间
+---@param target ServerPlayer @ 接受牌的角色
+---@param cardId integer @ 移动的牌
+---@param skillName string|nil @ 技能名
+---@param convert boolean|nil @ 是否可以替换装备（默认可以）
+---@param proposer ServerPlayer|nil @ 操作者
+Utility.moveCardIntoEquip = function (room, target, cardId, skillName, convert, proposer)
+  convert = (convert == nil) and true or convert
+  skillName = skillName or ""
+  local card = Fk:getCardById(cardId)
+  local fromId = room:getCardOwner(cardId) and room:getCardOwner(cardId).id or nil
+  local proposerId = proposer and proposer.id or nil
+  if Utility.canMoveCardIntoEquip(target, cardId, convert) then
+    if target:hasEmptyEquipSlot(card.sub_type) then
+      room:moveCards({ids = {cardId}, from = fromId, to = target.id, toArea = Card.PlayerEquip, moveReason = fk.ReasonPut,skillName = skillName,proposer = proposerId})
+    else
+      local existingEquip = target:getEquipments(card.sub_type)
+      local throw = #existingEquip == 1 and existingEquip[1] or
+      room:askForCardChosen(proposer or target, target, {card_data = { {"convertEquip",existingEquip} } }, "convertEquip")
+      room:moveCards({ids = {throw}, from = target.id, toArea = Card.DiscardPile, moveReason = fk.ReasonPutIntoDiscardPile, skillName = skillName,proposer = proposerId},
+      {ids = {cardId}, from = fromId, to = target.id, toArea = Card.PlayerEquip, moveReason = fk.ReasonPut,skillName = skillName,proposer = proposerId})
+    end
+  else
+    room:moveCards({ids = {cardId}, from = fromId, toArea = Card.DiscardPile, moveReason = fk.ReasonPutIntoDiscardPile,skillName = skillName})
+  end
+end
+Fk:loadTranslationTable{
+  ["convertEquip"] = "替换装备",
+}
+
+
+
+
+
+
+
+
+
 
 
 
