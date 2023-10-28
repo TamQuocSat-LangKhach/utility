@@ -212,17 +212,51 @@ Fk:loadTranslationTable{
   ["convertEquip"] = "替换装备",
 }
 
+--- 询问玩家交换两堆卡牌中的任意张。
+---@param player ServerPlayer @ 要询问的玩家
+---@param name1 string @ 第一行卡牌名称
+---@param name2 string @ 第一行卡牌名称
+---@param cards1 integer[] @ 第一行的卡牌
+---@param cards2 integer[] @ 第二行的卡牌
+---@param prompt string @ 操作提示（FXIME:暂时无效）
+---@param n integer|null @ 至多可交换的卡牌数量（不填或负数则无限制）
+---@return integer[]
+Utility.askForExchange = function(player, name1, name2, cards1, cards2, prompt, n)
+  n = n or -1
+  return player.room:askForPoxi(player, "qml_exchange", {
+    { name1, cards1 },
+    { name2, cards2 },
+  }, {prompt, n})
+end
 
+Fk:addPoxiMethod{
+  name = "qml_exchange",
+  card_filter = function(to_select, selected, data, extra_data)
+    if data == nil or extra_data == nil then return false end
+    local cards = data[1][2]
+    local x = #table.filter(selected, function (id)
+      return table.contains(cards, id)
+    end)
+    local max_x = extra_data[2]
+    if table.contains(cards, to_select) then
+      return x < max_x
+    end
+    return #selected < x + max_x
+  end,
+  feasible = function(selected, data, extra_data)
+    if data == nil then return false end
+    local cards = data[1][2]
+    return #table.filter(selected, function (id)
+      return table.contains(cards, id)
+    end) *2 == #selected
+  end,
+  prompt = function ()
+    return "选择要交换的卡牌"
+  end
+}
 
-
-
-
-
-
-
-
-
-
-
+Fk:loadTranslationTable{
+  ["qml_exchange"] = "换牌",
+}
 
 return Utility
