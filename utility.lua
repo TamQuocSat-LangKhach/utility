@@ -66,6 +66,35 @@ Utility.getUseExtraTargets = function(room, data, bypass_distances)
   return tos
 end
 
+-- 判断一名角色为一个使用事件的唯一目标（目标角色数为1，不包括死亡角色且不计算重复目标）
+---@param player ServerPlayer @ 目标角色
+---@param data CardUseStruct @ 使用事件的data
+---@param event Event @ 使用事件的时机（需判断使用TargetGroup还是AimGroup，by smart Ho-spair）
+---@return boolean
+Utility.isOnlyTarget = function(player, data, event)
+  if data.tos == nil then return false end
+  local tos = {}
+  if table.contains({ fk.TargetSpecifying, fk.TargetConfirming, fk.TargetSpecified, fk.TargetConfirmed }, event) then
+    tos = AimGroup:getAllTargets(data.tos)
+  else
+    tos = TargetGroup:getRealTargets(data.tos)
+  end
+  if not table.contains(tos, player.id) then return false end
+  for _, p in ipairs(player.room.alive_players) do
+    if p ~= player and table.contains(tos, p.id) then
+      return false
+    end
+  end
+  return true
+end
+
+-- 判断一张牌是否为非转化的卡牌（不为转化使用且对应实体牌数为1且两者牌名相同）
+---@param card Card @ 待判别的卡牌
+---@return boolean
+Utility.isPureCard = function(card)
+  return not card:isVirtual() and card.trueName == Fk:getCardById(card.id, true).trueName
+end
+
 -- 令两名角色交换特定的牌（FIXME：暂时只能正面朝上移动过）
 ---@param room Room
 ---@param player ServerPlayer @ 移动的操作者（proposer）
