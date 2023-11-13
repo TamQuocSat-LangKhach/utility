@@ -288,4 +288,116 @@ Fk:loadTranslationTable{
   ["qml_exchange"] = "换牌",
 }
 
+
+--- 将一些卡牌同时分配给一些角色。请确保这些牌的所有者一致
+---@param room Room @ 房间
+---@param list table<integer[]> @ 分配牌和角色的数据，键为字符串化的角色id，值为分配给其的牌
+---@param proposer integer|nil @ 操作者的id
+---@param skillName string|nil @ 技能名
+Utility.doDistribution = function (room, list, proposer, skillName)
+  skillName = skillName or "distribution_skill"
+  local moveInfos = {}
+  for str, cards in pairs(list) do
+    local to = tonumber(str)
+    local toP = room:getPlayerById(to)
+    local handcards = toP:getCardIds("h")
+    cards = table.filter(cards, function (id) return not table.contains(handcards, id) end)
+    if #cards > 0 then
+      local from = room:getCardOwner(cards[1])
+      table.insert(moveInfos, {
+      ids = cards,
+      from = from and from.id,
+      to = to,
+      toArea = Card.PlayerHand,
+      moveReason = fk.ReasonGive,
+      proposer = proposer,
+      skillName = skillName,})
+    end
+  end
+  if #moveInfos > 0 then
+    room:moveCards(table.unpack(moveInfos))
+  end
+end
+
+
+--- 询问将卡牌分配给任意角色。请确保这些牌的所有者一致
+---@param player ServerPlayer @ 要询问的玩家
+---@param cards integer[] @ 要分配的卡牌
+---@param targets ServerPlayer[] @ 可以获得卡牌的角色
+---@param skillName string|nil @ 技能名，影响焦点信息。默认为“分配”
+---@param minNum integer|nil @ 最少交出的卡牌数，默认0
+---@param maxNum integer|nil @ 最多交出的卡牌数，默认所有牌
+---@param prompt string|nil @ 询问提示信息
+---@param expand_pile string|nil @ 可选私人牌堆名称，如要分配你武将牌上的牌请填写
+---@param skipMove boolean|nil @ 是否跳过移动。默认不跳过
+---@return table<integer[]> @ 返回一个表，键为字符串化的角色id，值为分配给其的牌
+Utility.askForDistribution = function(player, cards, targets, skillName, minNum, maxNum, prompt, expand_pile, skipMove)
+  local room = player.room
+  local _cards = table.simpleClone(cards)
+  targets = table.map(targets, Util.IdMapper)
+  skillName = skillName or "distribution_skill"
+  prompt = prompt or "#askForDistribution"
+  minNum = minNum or 0
+  maxNum = maxNum or #cards
+  local getString = function(n) return string.format("%.0f", n) end
+  local list = {}
+  for _, p in ipairs(targets) do
+    list[getString(p)] = {}
+  end
+  local data = { expand_pile = expand_pile }
+  room:setPlayerMark(player, "distribution_targets", targets)
+  
+  while maxNum > 0 do
+    room:setPlayerMark(player, "distribution_cards", _cards)
+    room:setPlayerMark(player, "distribution_maxnum", maxNum)
+    local success, dat = room:askForUseActiveSkill(player, "distribution_skill", "#distribution_skill:::"..minNum..":"..maxNum, minNum == 0, data, false)
+    if success and dat then
+      local to = dat.targets[1]
+      local give_cards = dat.cards
+      for _, id in ipairs(give_cards) do
+        table.insert(list[getString(to)], id)
+        table.removeOne(_cards, id)
+        room:setCardMark(Fk:getCardById(id), "@distribution_to", Fk:translate(room:getPlayerById(to).general))
+      end
+      minNum = math.max(0, minNum - #give_cards)
+      maxNum = maxNum - #give_cards
+    else
+      break
+    end
+  end
+
+  for _, id in ipairs(cards) do
+    room:setCardMark(Fk:getCardById(id), "@distribution_to", 0)
+  end
+  if minNum > 0 then
+    local p = table.random(targets)
+    local c = table.random(_cards, minNum)
+    table.insertTable(list[getString(p)], c)
+  end
+  if not skipMove then
+    Utility.doDistribution(room, list, player.id, skillName)
+  end
+
+  return list
+end
+local distribution_skill = fk.CreateActiveSkill{
+  name = "distribution_skill",
+  mute = true,
+  min_card_num = 1,
+  card_filter = function(self, to_select, selected)
+    return #selected < Self:getMark("distribution_maxnum") and table.contains(Self:getMark("distribution_cards"), to_select)
+  end,
+  target_num = 1,
+  target_filter = function(self, to_select, selected, selected_cards)
+    return #selected == 0 and #selected_cards > 0 and table.contains(Self:getMark("distribution_targets"), to_select)
+  end,
+}
+Fk:addSkill(distribution_skill)
+Fk:loadTranslationTable{
+  ["#distribution_skill"] = "请分配这些牌，至少%arg张，剩余%arg2张",
+  ["distribution_skill"] = "分配",
+  ["@distribution_to"] = "",
+}
+
+
 return Utility
