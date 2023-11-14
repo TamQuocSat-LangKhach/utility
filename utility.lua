@@ -288,6 +288,54 @@ Fk:loadTranslationTable{
   ["qml_exchange"] = "换牌",
 }
 
+--- 询问玩家选择牌和选项（FIXME:未考虑默认返回值）
+---@param player ServerPlayer @ 要询问的玩家
+---@param skillname string @ 烧条技能名
+---@param cards integer[] @ 待选卡牌
+---@param choices string[] @ 可选选项列表
+---@param prompt string @ 操作提示
+---@param cancel_choices string[]|nil @ 可选选项列表（不选择牌时的选项）
+---@param min integer|nil  @ 最小选牌数
+---@param max integer|nil  @ 最大选牌数
+---@param all_cards integer[]|nil  @ 会显示的所有卡牌
+---@return string
+Utility.askforChooseCardsAndChoice = function(player, skillname, cards, choices, prompt, cancel_choices, min, max, all_cards)
+  return player.room:askForCustomDialog(player, skillname,
+  "packages/utility/qml/ChooseCardsAndChoiceBox.qml", {
+    all_cards or cards,
+    choices,
+    prompt,
+    cancel_choices or {},
+    min or 1,
+    max or 1,
+    all_cards and table.filter(all_cards, function (id)
+      return not table.contains(cards, id)
+    end) or {}
+  })
+end
+
+--- 让玩家观看一些卡牌（用来取代fillAG式观看）。
+---@param player ServerPlayer @ 要询问的玩家
+---@param cards integer[] @ 待选卡牌
+---@param skillname string|nil @ 烧条技能名
+---@param prompt string|nil @ 操作提示
+Utility.viewCards = function(player, cards, skillname, prompt)
+  player.room:askForCustomDialog(player, skillname or "utility_viewcards",
+  "packages/utility/qml/ChooseCardsAndChoiceBox.qml", {
+    cards,
+    {"OK"},
+    prompt or "$ViewCards",
+    {},
+    0,
+    0,
+  })
+end
+
+Fk:loadTranslationTable{
+  ["utility_viewcards"] = "观看卡牌",
+  ["$ViewCards"] = "请观看卡牌",
+}
+
 
 --- 将一些卡牌同时分配给一些角色。请确保这些牌的所有者一致
 ---@param room Room @ 房间
