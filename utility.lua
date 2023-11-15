@@ -346,7 +346,7 @@ end
 ---@param skillname string|nil @ 烧条技能名
 ---@param prompt string|nil @ 操作提示
 Utility.viewCards = function(player, cards, skillname, prompt)
-  Utility.askforChooseCardsAndChoice(player, cards, {}, skillname or "utility_viewcards", prompt or "#AskForChoice", {"OK"})
+  Utility.askforChooseCardsAndChoice(player, cards, {}, skillname or "utility_viewcards", prompt or "$ViewCards", {"OK"})
 end
 
 Fk:loadTranslationTable{
