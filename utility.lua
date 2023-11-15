@@ -288,30 +288,56 @@ Fk:loadTranslationTable{
   ["qml_exchange"] = "换牌",
 }
 
---- 询问玩家选择牌和选项（FIXME:未考虑默认返回值）
+--- 询问玩家选择牌和选项
 ---@param player ServerPlayer @ 要询问的玩家
----@param skillname string @ 烧条技能名
 ---@param cards integer[] @ 待选卡牌
----@param choices string[] @ 可选选项列表
+---@param choices string[] @ 可选选项列表（在min和max范围内选择cards里的牌才会被点亮的选项）
+---@param skillname string @ 烧条技能名
 ---@param prompt string @ 操作提示
 ---@param cancel_choices string[]|nil @ 可选选项列表（不选择牌时的选项）
----@param min integer|nil  @ 最小选牌数
----@param max integer|nil  @ 最大选牌数
+---@param min integer|nil  @ 最小选牌数（默认为1）
+---@param max integer|nil  @ 最大选牌数（默认为1）
 ---@param all_cards integer[]|nil  @ 会显示的所有卡牌
----@return string
-Utility.askforChooseCardsAndChoice = function(player, skillname, cards, choices, prompt, cancel_choices, min, max, all_cards)
-  return player.room:askForCustomDialog(player, skillname,
+---@return integer[], string
+Utility.askforChooseCardsAndChoice = function(player, cards, choices, skillname, prompt, cancel_choices, min, max, all_cards)
+  cancel_choices = (cancel_choices == nil) and {} or cancel_choices
+  min = min or 1
+  max = max or 1
+  assert(min <= max, "limits error: The upper limit should be less than the lower limit")
+  assert(#cards >= min or #cancel_choices > 0, "limits Error: No enough cards")
+  assert(#choices > 0 or #cancel_choices > 0, "should have choice to choose")
+  local result = player.room:askForCustomDialog(player, skillname,
   "packages/utility/qml/ChooseCardsAndChoiceBox.qml", {
     all_cards or cards,
     choices,
     prompt,
-    cancel_choices or {},
-    min or 1,
-    max or 1,
+    cancel_choices,
+    min,
+    max,
     all_cards and table.filter(all_cards, function (id)
       return not table.contains(cards, id)
     end) or {}
   })
+  if result ~= "" then
+    local reply = json.decode(result)
+    return reply.cards, reply.choice
+  end
+  if #cancel_choices > 0 then
+    return {}, cancel_choices[1]
+  end
+  return table.random(cards, min), choices[1]
+end
+
+--- 询问玩家观看一些卡牌并选择一项
+---@param player ServerPlayer @ 要询问的玩家
+---@param cards integer[] @ 待选卡牌
+---@param choices string[] @ 可选选项列表
+---@param skillname string @ 烧条技能名
+---@param prompt string|nil @ 操作提示
+---@return string
+Utility.askforViewCardsAndChoice = function(player, cards, choices, skillname, prompt)
+  local _, result = Utility.askforChooseCardsAndChoice(player, cards, {}, skillname, prompt or "#AskForChoice", choices)
+  return result
 end
 
 --- 让玩家观看一些卡牌（用来取代fillAG式观看）。
@@ -320,15 +346,7 @@ end
 ---@param skillname string|nil @ 烧条技能名
 ---@param prompt string|nil @ 操作提示
 Utility.viewCards = function(player, cards, skillname, prompt)
-  player.room:askForCustomDialog(player, skillname or "utility_viewcards",
-  "packages/utility/qml/ChooseCardsAndChoiceBox.qml", {
-    cards,
-    {"OK"},
-    prompt or "$ViewCards",
-    {},
-    0,
-    0,
-  })
+  Utility.askforChooseCardsAndChoice(player, cards, {}, skillname or "utility_viewcards", prompt or "#AskForChoice", {"OK"})
 end
 
 Fk:loadTranslationTable{
