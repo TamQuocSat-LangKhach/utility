@@ -194,7 +194,7 @@ end
 
 
 --- 判断一张牌能否移动至某角色的装备区
----@param target ServerPlayer @ 接受牌的角色
+---@param target Player @ 接受牌的角色
 ---@param cardId integer @ 移动的牌
 ---@param convert boolean|nil @ 是否可以替换装备（默认可以）
 ---@return boolean 
