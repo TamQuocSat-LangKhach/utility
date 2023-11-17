@@ -466,4 +466,76 @@ Fk:loadTranslationTable{
 }
 
 
+
+--- 询问玩家使用一张虚拟卡。注意此函数不判断使用次数限制
+---@param room Room @ 房间
+---@param player ServerPlayer @ 要询问的玩家
+---@param name string @ 使用虚拟卡名
+---@param selected_subcards integer[]|nil @ 虚拟牌的子牌，默认空
+---@param skillName string|nil @ 技能名
+---@param prompt string|nil @ 询问提示信息。默认为：请视为使用xx
+---@param cancelable boolean|nil @ 是否可以取消，默认可以。请勿给多目标锦囊,借刀,无中设置不可取消
+---@param bypass_distances boolean|nil @ 是否无距离限制。默认有
+---@param extraUse boolean|nil @ 是否不计入次数。默认不计入
+---@param extra_data table|nil @ 额外信息，因技能而异了
+---@param skipUse boolean|nil @ 是否跳过使用。默认不跳过
+---@return CardUseStruct|nil @ 返回卡牌使用框架
+Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, skillName, prompt, cancelable, bypass_distances, extraUse, extra_data, skipUse)
+  selected_subcards = selected_subcards or {}
+  extraUse = (extraUse == nil) and true or extraUse
+  skillName = skillName or ""
+  prompt = prompt or ("#askForUseVirtualCard:::"..skillName..":"..name)
+  cancelable = (cancelable == nil) and true or cancelable
+  local card = Fk:cloneCard(name)
+  card:addSubcards(selected_subcards)
+  card.skillName = skillName
+  if player:prohibitUse(card) then return end
+  local targets = {}
+  for _, p in ipairs(room.alive_players) do
+    if not player:isProhibited(p, card) and card.skill:modTargetFilter(p.id, {}, player.id, card, not bypass_distances) then
+      table.insert(targets, p.id)
+    end
+  end
+  if #targets == 0 then return end
+  extra_data = extra_data or {}
+  extra_data.view_as_name = name
+  extra_data.selected_subcards = selected_subcards
+  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1) end
+  local success, dat = room:askForUseViewAsSkill(player, "virtual_viewas", prompt, cancelable, extra_data)
+  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end
+  local tos = {}
+  if success and dat then
+    tos = dat.targets
+  elseif not cancelable then
+    tos = table.random(targets, 1)
+  end
+  if #tos > 0 then
+    local use = {
+      from = player.id,
+      tos = table.map(tos, function(p) return {p} end),
+      card = card,
+      extraUse = extraUse,
+    }
+    if not skipUse then
+      room:useCard(use)
+    end
+    return use
+  end
+  return nil
+end
+local virtual_viewas = fk.CreateViewAsSkill{
+  name = "virtual_viewas",
+  card_filter = Util.FalseFunc,
+  view_as = function(self)
+    local card = Fk:cloneCard(self.view_as_name)
+    card:addSubcards(self.selected_subcards)
+    return card
+  end,
+}
+Fk:addSkill(virtual_viewas)
+Fk:loadTranslationTable{
+  ["virtual_viewas"] = "使用虚拟牌",
+  ["#askForUseVirtualCard"] = "%arg：请视为使用 %arg2",
+}
+
 return Utility
