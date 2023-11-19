@@ -541,4 +541,37 @@ Fk:loadTranslationTable{
   ["#askForUseVirtualCard"] = "%arg：请视为使用 %arg2",
 }
 
+
+
+--- 判断当前使用/打出事件是否是在使用手牌
+---@param player ServerPlayer @ 要判断的使用者
+---@param data CardUseStruct @ 当前事件的data
+---@return boolean
+Utility.IsUsingHandcard = function(player, data)
+  local cards = data.card:isVirtual() and data.card.subcards or {data.card.id}
+  if #cards == 0 then return end
+  local yes = false
+  local use = player.room.logic:getCurrentEvent()
+  use:searchEvents(GameEvent.MoveCards, 1, function(e)
+    if e.parent and e.parent.id == use.id then
+      local subcheck = table.simpleClone(cards)
+      for _, move in ipairs(e.data) do
+        if move.from == player.id and (move.moveReason == fk.ReasonUse or move.moveReason == fk.ReasonResonpse) then
+          for _, info in ipairs(move.moveInfo) do
+            if table.removeOne(subcheck, info.cardId) and info.fromArea == Card.PlayerHand then
+              --continue
+            else
+              break
+            end
+          end
+        end
+      end
+      if #subcheck == 0 then
+        yes = true
+      end
+    end
+  end)
+  return yes
+end
+
 return Utility
