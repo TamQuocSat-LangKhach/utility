@@ -506,7 +506,8 @@ Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, s
   local tos = {}
   if success and dat then
     tos = dat.targets
-  elseif not cancelable then
+  else
+    if cancelable then return end
     if card.name == "collateral" then return end -- ignore collateral
     local min_card_num = card.skill.min_target_num or 1
     if min_card_num > 0 then -- exclude ex_nihilo, savage_assault
