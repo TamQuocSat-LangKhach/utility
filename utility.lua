@@ -474,7 +474,7 @@ Fk:loadTranslationTable{
 ---@param selected_subcards integer[]|nil @ 虚拟牌的子牌，默认空
 ---@param skillName string|nil @ 技能名
 ---@param prompt string|nil @ 询问提示信息。默认为：请视为使用xx
----@param cancelable boolean|nil @ 是否可以取消，默认可以。请勿给多目标锦囊,借刀,无中设置不可取消
+---@param cancelable boolean|nil @ 是否可以取消，默认可以。请勿给借刀设置不可取消
 ---@param bypass_distances boolean|nil @ 是否无距离限制。默认有
 ---@param extraUse boolean|nil @ 是否不计入次数。默认不计入
 ---@param extra_data table|nil @ 额外信息，因技能而异了
@@ -507,22 +507,24 @@ Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, s
   if success and dat then
     tos = dat.targets
   elseif not cancelable then
-    tos = table.random(targets, 1)
-  end
-  if #tos > 0 then
-    local use = {
-      from = player.id,
-      tos = table.map(tos, function(p) return {p} end),
-      card = card,
-      extraUse = extraUse,
-    }
-    if not skipUse then
-      room:useCard(use)
+    if card.name == "collateral" then return end -- ignore collateral
+    local min_card_num = card.skill.min_target_num or 1
+    if min_card_num > 0 then -- exclude ex_nihilo, savage_assault
+      tos = table.random(targets, min_card_num)
     end
-    return use
   end
-  return nil
+  local use = {
+    from = player.id,
+    tos = table.map(tos, function(p) return {p} end),
+    card = card,
+    extraUse = extraUse,
+  }
+  if not skipUse then
+    room:useCard(use)
+  end
+  return use
 end
+
 local virtual_viewas = fk.CreateViewAsSkill{
   name = "virtual_viewas",
   card_filter = Util.FalseFunc,
