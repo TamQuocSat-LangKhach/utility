@@ -185,7 +185,7 @@ Utility.swapHandCards = function(room, player, targetOne, targetTwo, skillName)
 end
 
 -- 获取角色对应Mark并初始化为table
----@param player ServerPlayer @ 要被获取标记的那个玩家
+---@param player Player @ 要被获取标记的那个玩家
 ---@param mark string @ 标记
 ---@return table
 Utility.getMark = function(player, mark)
@@ -573,5 +573,72 @@ Utility.IsUsingHandcard = function(player, data)
   end)
   return yes
 end
+
+
+--- 询问玩家使用一张手牌中的实体卡。注意此函数不判断使用次数限制
+---@param room Room @ 房间
+---@param player ServerPlayer @ 要询问的玩家
+---@param cards integer[]|nil @ 可以使用的卡牌，默认为所有手牌
+---@param pattern string|nil @ 选卡规则，与可选卡牌取交集
+---@param skillName string|nil @ 技能名
+---@param prompt string|nil @ 询问提示信息。默认为：请视为使用一张牌
+---@param extra_data table|nil @ 额外信息，因技能而异了
+---@param skipUse boolean|nil @ 是否跳过使用。默认不跳过
+---@return CardUseStruct|nil @ 返回卡牌使用框架
+Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, prompt, extra_data, skipUse)
+  cards = cards or player:getCardIds("h")
+  pattern = pattern or "."
+  skillName = skillName or ""
+  prompt = prompt or ("#askForUseRealCard:::"..skillName)
+  local cardIds = {}
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 1)
+  for _, cid in ipairs(cards) do
+    local card = Fk:getCardById(cid)
+    if Exppattern:Parse(pattern):match(card) then
+      if player:canUse(card) and not player:prohibitUse(card) then
+        table.insert(cardIds, cid)
+      end
+    end
+  end
+  extra_data = extra_data or {}
+  extra_data.optional_cards = cardIds
+  local success, dat = room:askForUseViewAsSkill(player, "realcard_viewas", prompt, true, extra_data)
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0)
+  if not (success and dat) then return end
+  local use = {
+    from = player.id,
+    tos = table.map(dat.targets, function(p) return {p} end),
+    card = Fk:getCardById(dat.cards[1]),
+    extraUse = true,
+  }
+  if not skipUse then
+    room:useCard(use)
+  end
+  return use
+end
+local realcard_viewas = fk.CreateViewAsSkill{
+  name = "realcard_viewas",
+  card_filter = function (self, to_select, selected)
+    return #selected == 0 and table.contains(self.optional_cards, to_select)
+  end,
+  view_as = function(self, cards)
+    if #cards == 1 then
+      return Fk:getCardById(cards[1])
+    end
+  end,
+}
+Fk:addSkill(realcard_viewas)
+Fk:loadTranslationTable{
+  ["realcard_viewas"] = "使用",
+  ["#askForUseRealCard"] = "%arg：请使用一张牌",
+}
+
+
+
+
+
+
+
+
 
 return Utility
