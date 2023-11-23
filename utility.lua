@@ -50,12 +50,13 @@ end
 ---@param room Room
 ---@param data CardUseStruct @ 使用事件的data
 ---@param bypass_distances boolean|nil @ 是否无距离关系的限制
+---@param use_AimGroup boolean|nil @ 某些场合需要使用AimGroup，by smart Ho-spair
 ---@return integer[] @ 返回满足条件的player的id列表
-Utility.getUseExtraTargets = function(room, data, bypass_distances)
+Utility.getUseExtraTargets = function(room, data, bypass_distances, use_AimGroup)
   if not (data.card.type == Card.TypeBasic or data.card:isCommonTrick()) then return {} end
   if data.card.skill:getMinTargetNum() > 1 then return {} end --stupid collateral
   local tos = {}
-  local current_targets = TargetGroup:getRealTargets(data.tos)
+  local current_targets = use_AimGroup and AimGroup:getAllTargets(data.tos) or TargetGroup:getRealTargets(data.tos)
   for _, p in ipairs(room.alive_players) do
     if not table.contains(current_targets, p.id) and not room:getPlayerById(data.from):isProhibited(p, data.card) then
       if data.card.skill:modTargetFilter(p.id, {}, data.from, data.card, not bypass_distances) then
