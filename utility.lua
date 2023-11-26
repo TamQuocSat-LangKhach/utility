@@ -634,11 +634,22 @@ Fk:loadTranslationTable{
   ["#askForUseRealCard"] = "%arg：请使用一张牌",
 }
 
+--- 判断一名角色是否为男性
+---@param player Player @ 玩家
+---@param realGender boolean|nil @ 是否获取真实性别，无视双性人。默认否
+---@return boolean
+Utility.isMale = function(player, realGender)
+  return player.gender == General.Male or (not realGender and player.gender == General.Bigender)
+end
 
 
-
-
-
+--- 判断一名角色是否为女性
+---@param player Player @ 玩家
+---@param realGender boolean|nil @ 是否获取真实性别，无视双性人。默认否
+---@return boolean
+Utility.isFemale = function(player, realGender)
+  return player.gender == General.Female or (not realGender and player.gender == General.Bigender)
+end
 
 
 
