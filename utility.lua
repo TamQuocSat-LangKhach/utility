@@ -717,4 +717,71 @@ Utility.GetEnemies = function(room, player, include_dead)
   return enemies
 end
 
+
+--[[
+  给卡牌上标记，用全局触发技监测，在一定时机销毁被标记的卡牌
+  DestructIntoDiscard 进入弃牌堆-基本牌影
+  DestructOutMyEquip 离开自己的装备区-新服刘晔
+  DestructOutEquip 进入非装备区(可在装备区/处理区移动)-OL冯方女
+--]]
+MarkEnum.DestructIntoDiscard = "__destr_discard"
+MarkEnum.DestructOutMyEquip = "__destr_my_equip"
+MarkEnum.DestructOutEquip = "__destr_equip"
+local CardDestructSkill = fk.CreateTriggerSkill{
+  name = "#card_destruct_skill",
+  global = true,
+  mute = true,
+  refresh_events = {fk.BeforeCardsMove},
+  can_refresh = Util.TrueFunc,
+  on_refresh = function(self, event, target, player, data)
+    local room = player.room
+    local mirror_moves = {}
+    local ids = {}
+    for _, move in ipairs(data) do
+      if move.toArea ~= Card.Void then
+        local move_info = {}
+        local mirror_info = {}
+        for _, info in ipairs(move.moveInfo) do
+          local id = info.cardId
+          local card = Fk:getCardById(id)
+          local yes
+          if card:getMark(MarkEnum.DestructIntoDiscard) > 0 and move.toArea == Card.DiscardPile then
+            yes = true
+          end
+          if card:getMark(MarkEnum.DestructOutMyEquip) > 0 and info.fromArea == Card.PlayerEquip then
+            yes = info.fromArea == Card.PlayerEquip
+          end
+          if card:getMark(MarkEnum.DestructOutEquip) > 0 and (info.fromArea == Card.PlayerEquip and move.toArea ~= Card.PlayerEquip and move.toArea ~= Card.Processing) then
+            yes = true
+          end
+          if yes then
+            table.insert(mirror_info, info)
+            table.insert(ids, id)
+          else
+            table.insert(move_info, info)
+          end
+        end
+        if #mirror_info > 0 then
+          move.moveInfo = move_info
+          local mirror_move = table.clone(move)
+          mirror_move.to = nil
+          mirror_move.toArea = Card.Void
+          mirror_move.moveInfo = mirror_info
+          table.insert(mirror_moves, mirror_move)
+        end
+      end
+    end
+    if #ids > 0 then
+      room:sendLog{ type = "#destructDerivedCards", card = ids, }
+      table.insertTable(data, mirror_moves)
+    end
+  end,
+}
+Fk:addSkill(CardDestructSkill)
+Fk:loadTranslationTable{
+  ["#card_destruct_skill"] = "卡牌销毁",
+  ["#destructDerivedCards"] = "%card 被销毁了",
+}
+
+
 return Utility
