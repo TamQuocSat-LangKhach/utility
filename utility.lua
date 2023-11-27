@@ -659,6 +659,7 @@ end
 ---@param include_dead boolean|nil @ 是否包括死亡角色。默认否
 ---@return ServerPlayer[] @ 玩家列表
 Utility.GetFriends = function(room, player, include_self, include_dead)
+  include_self = include_self or true
   local players = include_dead and room.players or room.alive_players
   local friends = {player}
   if table.contains({"aaa_role_mode", "vanished_dragon", "zombie_mode"}, room.settings.gameMode) then
