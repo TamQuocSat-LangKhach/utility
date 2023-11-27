@@ -652,5 +652,68 @@ Utility.isFemale = function(player, realGender)
 end
 
 
+--- 获得队友（注意：在客户端不能对暗身份角色生效）（或许对ai有用？）
+---@param room Room @ 房间
+---@param player ServerPlayer @ 自己
+---@param include_self boolean|nil @ 是否包括自己。默认是
+---@param include_dead boolean|nil @ 是否包括死亡角色。默认否
+---@return ServerPlayer[] @ 玩家列表
+Utility.GetFriends = function(room, player, include_self, include_dead)
+  local players = include_dead and room.players or room.alive_players
+  local friends = {player}
+  if table.contains({"aaa_role_mode", "vanished_dragon", "zombie_mode"}, room.settings.gameMode) then
+    if player.role == "lord" or player.role == "loyalist" then
+      friends = table.filter(players, function(p) return p.role == "lord" or p.role == "loyalist" end)
+    else
+      friends = table.filter(players, function(p) return p.role == player.role end)
+    end
+  elseif table.contains({"m_1v2_mode", "brawl_mode", "m_2v2_mode"}, room.settings.gameMode) then
+    friends = table.filter(players, function(p) return p.role == player.role end)
+  elseif table.contains({"nos_heg_mode", "new_heg_mode"}, room.settings.gameMode) then
+    if player.role == "wild" or player.kingdom == "unknown" then
+      friends = {player}
+    else
+      friends = table.filter(players, function(p) return p.kingdom == player.kingdom end)
+    end
+  else  --有需要的自行添加
+    friends = {player}
+  end
+  if not include_self then
+    table.removeOne(friends, player)
+  end
+  return friends
+end
+
+--- 获得敌人（注意：在客户端不能对暗身份角色生效）（或许对ai有用？）
+---@param room Room @ 房间
+---@param player ServerPlayer @ 自己
+---@param include_dead boolean|nil @ 是否包括死亡角色。默认否
+---@return ServerPlayer[] @ 玩家列表
+Utility.GetEnemies = function(room, player, include_dead)
+  local players = include_dead and room.players or room.alive_players
+  local enemies = {}
+  if table.contains({"aaa_role_mode", "vanished_dragon", "zombie_mode"}, room.settings.gameMode) then
+    if player.role == "lord" or player.role == "loyalist" then
+      enemies = table.filter(players, function(p) return p.role ~= "lord" and p.role ~= "loyalist" end)
+    else
+      enemies = table.filter(players, function(p) return p.role ~= player.role end)
+    end
+  elseif table.contains({"m_1v2_mode", "brawl_mode", "m_2v2_mode"}, room.settings.gameMode) then
+    enemies = table.filter(players, function(p) return p.role ~= player.role end)
+  elseif table.contains({"m_1v1_mode"}, room.settings.gameMode) then
+    enemies = {player:getNextAlive(true)}
+  elseif table.contains({"nos_heg_mode", "new_heg_mode"}, room.settings.gameMode) then
+    if player.role == "wild" then
+      enemies = room:getOtherPlayers(player, nil, include_dead)
+    elseif player.kingdom == "unknown" then
+      enemies = {}
+    else
+      enemies = table.filter(players, function(p) return p.role == "wild" or p.kingdom ~= player.kingdom end)
+    end
+  else  --有需要的自行添加
+    enemies = {}
+  end
+  return enemies
+end
 
 return Utility
