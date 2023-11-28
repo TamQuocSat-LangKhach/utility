@@ -4,7 +4,7 @@
 
 -- 要使用的话在拓展开头加一句 local U = require "packages/utility/utility" 即可(注意别加.lua)
 
-local Utility = {}
+local Utility = require 'packages/utility/_base'
 
 -- 在指定历史范围中找符合条件的事件（逆序）
 ---@param room Room
@@ -804,6 +804,6 @@ Fk:loadTranslationTable{
 
 
 
-
+dofile 'packages/utility/mobile_util.lua'
 
 return Utility
