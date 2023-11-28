@@ -2,7 +2,7 @@
 -- 因为不是拓展包，所以不能用init.lua（否则会被当拓展包加载并报错）
 -- 因为本体里面已经有util了所以命名为完整版utility
 
--- 要使用的话在拓展开头加一句local U = require "packages/utility/utility" 即可(注意别加.lua)
+-- 要使用的话在拓展开头加一句 local U = require "packages/utility/utility" 即可(注意别加.lua)
 
 local Utility = {}
 
@@ -782,6 +782,28 @@ Fk:loadTranslationTable{
   ["#card_destruct_skill"] = "卡牌销毁",
   ["#destructDerivedCards"] = "%card 被销毁了",
 }
+
+
+--- 更改某角色蓄力技的能量或能量上限
+---@param player ServerPlayer @ 角色
+---@param num integer|nil @ 改变的能量
+---@param max integer|nil @ 改变的能量上限
+Utility.skillCharged = function(player, num, max)
+  local room = player.room
+  num = num or 0
+  max = max or 0
+  local max_num = math.max(0, player:getMark("skill_charge_max") + max)
+  local new_num = math.min(max_num, math.max(0, player:getMark("skill_charge") + num))
+  room:setPlayerMark(player, "skill_charge_max", max_num)
+  room:setPlayerMark(player, "skill_charge", new_num)
+  room:setPlayerMark(player, "@skill_charge", (max_num == 0 and num == 0) and 0 or (new_num.."/"..max_num))
+end
+Fk:loadTranslationTable{
+  ["@skill_charge"] = "蓄力",
+}
+
+
+
 
 
 return Utility
