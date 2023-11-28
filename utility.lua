@@ -27,6 +27,35 @@ Utility.getEventsByRule = function(room, eventType, n, func, end_id)
   return ret
 end
 
+-- 用来判定一些卡牌在此次移动事件发生之后没有再被移动过。
+--
+-- 根据规则集，如果需要在卡牌移动后对参与此事件的卡牌进行操作，是需要过一遍这个检测的(=ﾟωﾟ)ﾉ
+---@param room Room
+---@param cards integer[] @ 待判定的卡牌
+---@param end_id? integer @ 查询历史范围：从最后的事件开始逆序查找直到id为end_id的事件（不含），缺省值为当前移动事件的id
+---@return integer[] @ 返回满足条件的卡牌的id列表
+Utility.moveCardsHoldingAreaCheck = function(room, cards, end_id)
+  if #cards == 0 then return {} end
+  if end_id == nil then
+    local move_event = room.logic:getCurrentEvent():findParent(GameEvent.MoveCards, true)
+    if move_event == nil then return {} end
+    end_id = move_event.id
+  end
+  local ret = table.simpleClone(cards)
+  Utility.getEventsByRule(room, GameEvent.MoveCards, 1, function (e)
+    for _, move in ipairs(e.data) do
+      for _, info in ipairs(move.moveInfo) do
+        table.removeOne(ret, info.cardId)
+      end
+    end
+    return (#ret == 0)
+  end, end_id)
+  return ret
+end
+
+
+
+
 -- 一名角色A对角色B使用牌的合法性检测
 ---@param room Room
 ---@param from ServerPlayer @ 使用来源
@@ -67,7 +96,9 @@ Utility.getUseExtraTargets = function(room, data, bypass_distances, use_AimGroup
   return tos
 end
 
--- 判断一名角色为一个使用事件的唯一目标（目标角色数为1，不包括死亡角色且不计算重复目标）
+-- 判断一名角色为一个使用事件的唯一目标
+--
+-- 规则集描述为目标角色数为1，是不包括死亡角色且不计算重复目标的
 ---@param player ServerPlayer @ 目标角色
 ---@param data CardUseStruct @ 使用事件的data
 ---@param event Event @ 使用事件的时机（需判断使用TargetGroup还是AimGroup，by smart Ho-spair）
