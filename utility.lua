@@ -815,23 +815,6 @@ Fk:loadTranslationTable{
 }
 
 
---- 更改某角色蓄力技的能量或能量上限
----@param player ServerPlayer @ 角色
----@param num integer|nil @ 改变的能量
----@param max integer|nil @ 改变的能量上限
-Utility.skillCharged = function(player, num, max)
-  local room = player.room
-  num = num or 0
-  max = max or 0
-  local max_num = math.max(0, player:getMark("skill_charge_max") + max)
-  local new_num = math.min(max_num, math.max(0, player:getMark("skill_charge") + num))
-  room:setPlayerMark(player, "skill_charge_max", max_num)
-  room:setPlayerMark(player, "skill_charge", new_num)
-  room:setPlayerMark(player, "@skill_charge", (max_num == 0 and num == 0) and 0 or (new_num.."/"..max_num))
-end
-Fk:loadTranslationTable{
-  ["@skill_charge"] = "蓄力",
-}
 
 
 
