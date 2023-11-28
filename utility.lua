@@ -814,9 +814,19 @@ Fk:loadTranslationTable{
   ["#destructDerivedCards"] = "%card 被销毁了",
 }
 
-
-
-
+--花色互转（支持int(Card.Heart)，string("heart")，icon("♥")，symbol(translate后的红色"♥")）
+---@param value any @ 花色
+---@param input_type string @ 输入类型("int|str|icon|sym")
+---@param output_type string @ 输出类型("int|str|icon|sym")
+Utility.ConvertSuit = function(value, input_type, output_type)
+  local mapper = {
+    ["int"] = {Card.Spade, Card.Heart, Card.Club, Card.Diamond, Card.NoSuit},
+    ["str"] = {"spade", "heart", "club", "diamond", "nosuit"},
+    ["icon"] = {"♠", "♥", "♣", "♦", ""},
+    ["sym"] = {"log_spade", "log_heart", "log_club", "log_diamond", "log_nosuit"},
+  }
+  return mapper[output_type][table.indexOf(mapper[input_type], value)]
+end
 
 dofile 'packages/utility/mobile_util.lua'
 
