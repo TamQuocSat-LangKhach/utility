@@ -127,6 +127,17 @@ Utility.isPureCard = function(card)
   return not card:isVirtual() and card.trueName == Fk:getCardById(card.id, true).trueName
 end
 
+-- 判断一张虚拟牌是否有对应的实体牌（规则集定义）
+---@param card Card @ 待判别的卡牌
+---@param room Room
+---@return boolean
+Utility.hasFullRealCard = function(room, card)
+  local cardlist = card:isVirtual() and card.subcards or {card.id}
+  return #cardlist > 0 and table.every(cardlist, function (id)
+    return room:getCardArea(id) == Card.Processing
+  end)
+end
+
 -- 令两名角色交换特定的牌（FIXME：暂时只能正面朝上移动过）
 ---@param room Room
 ---@param player ServerPlayer @ 移动的操作者（proposer）
