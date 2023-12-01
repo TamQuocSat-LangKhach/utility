@@ -253,35 +253,41 @@ Utility.canMoveCardIntoEquip = function(target, cardId, convert)
 end
 
 
---- 将一张牌移动至某角色的装备区，若不合法则置入弃牌堆
+--- 将一张牌移动至某角色的装备区，若不合法则置入弃牌堆。目前没做相同副类别装备同时置入的适配(甘露神典韦)
 ---@param room Room @ 房间
 ---@param target ServerPlayer @ 接受牌的角色
----@param cardId integer @ 移动的牌
+---@param cards integer|integer[] @ 移动的牌
 ---@param skillName string|nil @ 技能名
 ---@param convert boolean|nil @ 是否可以替换装备（默认可以）
 ---@param proposer ServerPlayer|nil @ 操作者
-Utility.moveCardIntoEquip = function (room, target, cardId, skillName, convert, proposer)
+Utility.moveCardIntoEquip = function (room, target, cards, skillName, convert, proposer)
   convert = (convert == nil) and true or convert
   skillName = skillName or ""
-  local card = Fk:getCardById(cardId)
-  local fromId = room:getCardOwner(cardId) and room:getCardOwner(cardId).id or nil
-  local proposerId = proposer and proposer.id or nil
-  if Utility.canMoveCardIntoEquip(target, cardId, convert) then
-    if target:hasEmptyEquipSlot(card.sub_type) then
-      room:moveCards({ids = {cardId}, from = fromId, to = target.id, toArea = Card.PlayerEquip, moveReason = fk.ReasonPut,skillName = skillName,proposer = proposerId})
+  cards = type(cards) == "table" and cards or {cards}
+  local moves = {}
+  for _, cardId in ipairs(cards) do
+    local card = Fk:getCardById(cardId)
+    local fromId = room.owner_map[cardId]
+    local proposerId = proposer and proposer.id or nil
+    if Utility.canMoveCardIntoEquip(target, cardId, convert) then
+      if target:hasEmptyEquipSlot(card.sub_type) then
+        table.insert(moves,{ids = {cardId}, from = fromId, to = target.id, toArea = Card.PlayerEquip, moveReason = fk.ReasonPut,skillName = skillName,proposer = proposerId})
+      else
+        local existingEquip = target:getEquipments(card.sub_type)
+        local throw = #existingEquip == 1 and existingEquip[1] or
+        room:askForCardChosen(proposer or target, target, {card_data = { {"convertEquip",existingEquip} } }, "convertEquip","#convertEquip")
+        table.insert(moves,{ids = {throw}, from = target.id, toArea = Card.DiscardPile, moveReason = fk.ReasonPutIntoDiscardPile, skillName = skillName,proposer = proposerId})
+        table.insert(moves,{ids = {cardId}, from = fromId, to = target.id, toArea = Card.PlayerEquip, moveReason = fk.ReasonPut,skillName = skillName,proposer = proposerId})
+      end
     else
-      local existingEquip = target:getEquipments(card.sub_type)
-      local throw = #existingEquip == 1 and existingEquip[1] or
-      room:askForCardChosen(proposer or target, target, {card_data = { {"convertEquip",existingEquip} } }, "convertEquip")
-      room:moveCards({ids = {throw}, from = target.id, toArea = Card.DiscardPile, moveReason = fk.ReasonPutIntoDiscardPile, skillName = skillName,proposer = proposerId},
-      {ids = {cardId}, from = fromId, to = target.id, toArea = Card.PlayerEquip, moveReason = fk.ReasonPut,skillName = skillName,proposer = proposerId})
+      table.insert(moves,{ids = {cardId}, from = fromId, toArea = Card.DiscardPile, moveReason = fk.ReasonPutIntoDiscardPile,skillName = skillName})
     end
-  else
-    room:moveCards({ids = {cardId}, from = fromId, toArea = Card.DiscardPile, moveReason = fk.ReasonPutIntoDiscardPile,skillName = skillName})
   end
+  room:moveCards(table.unpack(moves))
 end
 Fk:loadTranslationTable{
   ["convertEquip"] = "替换装备",
+  ["#convertEquip"] = "选择一张装备牌被替换",
 }
 
 --- 询问玩家交换两堆卡牌中的任意张。
@@ -762,7 +768,8 @@ end
 
 --[[
   给卡牌上标记，用全局触发技监测，在一定时机销毁被标记的卡牌
-  DestructIntoDiscard 进入弃牌堆-基本牌影
+
+  DestructIntoDiscard 进入弃牌堆-OL蒲元
   DestructOutMyEquip 离开自己的装备区-新服刘晔
   DestructOutEquip 进入非装备区(可在装备区/处理区移动)-OL冯方女
 --]]
