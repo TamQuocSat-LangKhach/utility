@@ -846,6 +846,45 @@ Utility.ConvertSuit = function(value, input_type, output_type)
   return mapper[output_type][table.indexOf(mapper[input_type], value)]
 end
 
+--从键值对表中随机取N个值（每种最多取一个）
+---@param cardDic table @ 卡表
+---@param num number @ 要取出的数量
+---@return table
+Utility.getRandomCards = function (cardDic, num)
+  local cardMap = table.simpleClone(cardDic)
+  local toObtain = {}
+  while #toObtain < num and next(cardMap) ~= nil do
+    local dicLength = 0
+    for _, ids in pairs(cardMap) do
+      dicLength = dicLength + #ids
+    end
+
+    local randomIdx = math.random(1, dicLength)
+    dicLength = 0
+    for key, ids in pairs(cardMap) do
+      dicLength = dicLength + #ids
+      if dicLength >= randomIdx then
+        table.insert(toObtain, ids[dicLength - randomIdx + 1])
+        cardMap[key] = nil
+        break
+      end
+    end
+  end
+  return toObtain
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
 dofile 'packages/utility/mobile_util.lua'
 
 return Utility
