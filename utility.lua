@@ -877,7 +877,55 @@ end
 
 
 
+MarkEnum.SlashResidue = "__slash_residue"
+MarkEnum.SlashBypassTimes = "__slash_by_times"
+MarkEnum.SlashBypassDistances = "__slash_by_dist"
 
+--- 增加杀额外次数/杀无距离限制
+---@param player ServerPlayer @ 角色
+---@param mark string @ 类型 填 "cishu" 或 "juli"
+---@param num integer|nil @ 增加额外次数，默认为1
+---@param duration string|nil @ 持续时间，默认本阶段。填 "turn" 或者 "phase"
+Utility.addSlashTargetMod = function(player, mark, num, duration)
+  duration = (duration == nil) and "-phase" or "-"..duration
+  local room = player.room
+  if mark == MarkEnum.SlashResidue or mark == "cishu" then
+    num = num or 1
+    if num > 100 then
+      room:setPlayerMark(player, MarkEnum.SlashBypassTimes..duration, 1)
+    end
+    room:addPlayerMark(player, MarkEnum.SlashResidue..duration, num)
+  else
+    room:setPlayerMark(player, MarkEnum.SlashBypassDistances..duration, 1)
+  end
+end
+local global_slash_targetmod = fk.CreateTargetModSkill{
+  name = "global_slash_targetmod",
+  global = true,
+  residue_func = function(self, player, skill, scope)
+    if skill.trueName == "slash_skill" and scope == Player.HistoryPhase then
+      local mark = MarkEnum.SlashResidue
+      local num = 0
+      for _, m in ipairs({"-turn","-phase"}) do
+        num = num + player:getMark(mark..m)
+      end
+      return num
+    end
+  end,
+  bypass_times = function(self, player, skill, scope)
+    if skill.trueName == "slash_skill" and scope == Player.HistoryPhase then
+      local mark = MarkEnum.SlashBypassTimes
+      return player:getMark(mark.."-phase") > 0 or player:getMark(mark.."-turn") > 0
+    end
+  end,
+  bypass_distances = function (self, player, skill)
+    if skill.trueName == "slash_skill" then
+      local mark = MarkEnum.SlashBypassDistances
+      return player:getMark(mark.."-phase") > 0 or player:getMark(mark.."-turn") > 0
+    end
+  end
+}
+Fk:addSkill(global_slash_targetmod)
 
 
 
