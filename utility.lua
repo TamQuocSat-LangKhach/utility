@@ -900,14 +900,14 @@ local global_slash_targetmod = fk.CreateTargetModSkill{
     if skill.trueName == "slash_skill" and scope == Player.HistoryPhase then
       return table.find(MarkEnum.TempMarkSuffix, function(s)
         return player:getMark(MarkEnum.SlashBypassTimes .. s) ~= 0
-      end) > 0
+      end)
     end
   end,
   bypass_distances = function (self, player, skill)
     if skill.trueName == "slash_skill" then
       return table.find(MarkEnum.TempMarkSuffix, function(s)
         return player:getMark(MarkEnum.SlashBypassDistances .. s) ~= 0
-      end) > 0
+      end)
     end
   end
 }
