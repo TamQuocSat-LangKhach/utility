@@ -56,6 +56,23 @@ end
 
 
 
+-- 使用牌的合法性检测
+---@param room Room
+---@param player ServerPlayer @ 使用来源
+---@param card Card @ 被使用的卡牌
+---@param times_limited boolean|nil @ 是否有次数限制
+Utility.canUseCard = function(room, player, card, times_limited)
+  if player:prohibitUse(card) then return false end
+  if not times_limited then
+    room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 1)
+  end
+  local can_use = player:canUse(card)
+  if not times_limited then
+    room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0)
+  end
+  return can_use
+end
+
 -- 一名角色A对角色B使用牌的合法性检测
 ---@param room Room
 ---@param from ServerPlayer @ 使用来源
@@ -873,7 +890,42 @@ Utility.getRandomCards = function (cardDic, num)
   return toObtain
 end
 
+-- 根据提供的卡表来印卡并保存到room.tag中，已有则直接读取
+---@param room Room @ 房间
+---@param cardDic table @ 卡表（卡名、花色、点数）
+---@param name string @ 保存的tag名称
+---@return table
+Utility.prepareDeriveCards = function (room, cardDic, name)
+  local cards = room:getTag(name)
+  if type(cards) == "table" then
+    return cards
+  end
+  cards = {}
+  for _, value in ipairs(cardDic) do
+    table.insert(cards, room:printCard(value[1], value[2], value[3]).id)
+  end
+  return cards
+end
 
+-- 印一套基础牌堆中的卡（仅包含基本牌、锦囊牌，无花色点数）
+---@param room Room @ 房间
+---@return table
+Utility.prepareUniversalCards = function (room)
+  local cards = room:getTag("universal_cards")
+  if type(cards) == "table" then
+    return cards
+  end
+  local names = {}
+  for _, id in ipairs(Fk:getAllCardIds()) do
+    local card = Fk:getCardById(id)
+    if (card.type == Card.TypeBasic or card.type == Card.TypeTrick) and not card.is_derived then
+      table.insertIfNeed(names, card.trueName)
+    end
+  end
+  return Utility.prepareDeriveCards(room, table.map(names, function (name)
+    return {name, Card.NoSuit, 0}
+  end), "universal_cards")
+end
 
 
 
