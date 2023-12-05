@@ -904,6 +904,7 @@ Utility.prepareDeriveCards = function (room, cardDic, name)
   for _, value in ipairs(cardDic) do
     table.insert(cards, room:printCard(value[1], value[2], value[3]).id)
   end
+  room:setTag(name, cards)
   return cards
 end
 
