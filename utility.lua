@@ -468,7 +468,6 @@ Utility.askForDistribution = function(player, cards, targets, skillName, minNum,
   local _cards = table.simpleClone(cards)
   targets = table.map(targets, Util.IdMapper)
   skillName = skillName or "distribution_skill"
-  prompt = prompt or "#askForDistribution"
   minNum = minNum or 0
   maxNum = maxNum or #cards
   local getString = function(n) return string.format("%.0f", n) end
@@ -479,10 +478,11 @@ Utility.askForDistribution = function(player, cards, targets, skillName, minNum,
   local data = { expand_pile = expand_pile }
   room:setPlayerMark(player, "distribution_targets", targets)
   
-  while maxNum > 0 do
+  while maxNum > 0 and #_cards > 0 do
     room:setPlayerMark(player, "distribution_cards", _cards)
     room:setPlayerMark(player, "distribution_maxnum", maxNum)
-    local success, dat = room:askForUseActiveSkill(player, "distribution_skill", "#distribution_skill:::"..minNum..":"..maxNum, minNum == 0, data, false)
+    prompt = prompt or ("#distribution_skill:::"..minNum..":"..maxNum)
+    local success, dat = room:askForUseActiveSkill(player, "distribution_skill", prompt, minNum == 0, data, false)
     if success and dat then
       local to = dat.targets[1]
       local give_cards = dat.cards
