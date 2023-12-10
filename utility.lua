@@ -966,11 +966,122 @@ local global_slash_targetmod = fk.CreateTargetModSkill{
 }
 Fk:addSkill(global_slash_targetmod)
 
+Utility.getActualDamageEvents = function(room, n, func, scope, end_id)
+  if not end_id then
+    scope = scope or Player.HistoryTurn
+  end
 
+  n = n or 1
+  func = func or Util.TrueFunc
 
+  local logic = room.logic
+  local eventType = GameEvent.Damage
+  local ret = {}
+  local endIdRecorded
+  local tempEvents = {}
 
+  local addTempEvents = function(reverse)
+    if #tempEvents > 0 and #ret < n then
+      table.sort(tempEvents, function(a, b)
+        if reverse then
+          return a.data[1].dealtRecorderId > b.data[1].dealtRecorderId
+        else
+          return a.data[1].dealtRecorderId < b.data[1].dealtRecorderId
+        end
+      end)
 
+      for _, e in ipairs(tempEvents) do
+        table.insert(ret, e)
+        if #ret >= n then return true end
+      end
+    end
 
+    endIdRecorded = nil
+    tempEvents = {}
+
+    return false
+  end
+
+  if scope then
+    local event = logic:getCurrentEvent()
+    local start_event ---@type GameEvent
+    if scope == Player.HistoryGame then
+      start_event = logic.all_game_events[1]
+    elseif scope == Player.HistoryRound then
+      start_event = event:findParent(GameEvent.Round, true)
+    elseif scope == Player.HistoryTurn then
+      start_event = event:findParent(GameEvent.Turn, true)
+    elseif scope == Player.HistoryPhase then
+      start_event = event:findParent(GameEvent.Phase, true)
+    end
+
+    local events = logic.event_recorder[eventType] or Util.DummyTable
+    local from = start_event.id
+    local to = start_event.end_id
+    if math.abs(to) == 1 then to = #logic.all_game_events end
+
+    for _, v in ipairs(events) do
+      local damageStruct = v.data[1]
+      if damageStruct.dealtRecorderId then
+        if endIdRecorded and v.id > endIdRecorded then
+          local result = addTempEvents()
+          if result then
+            return ret
+          end
+        end
+
+        if v.id >= from and v.id <= to then
+          if not endIdRecorded and v.end_id > -1 and v.end_id > v.id then
+            endIdRecorded = v.end_id
+          end
+
+          if func(v) then
+            if endIdRecorded then
+              table.insert(tempEvents, v)
+            else
+              table.insert(ret, v)
+            end
+          end
+        end
+        if #ret >= n then break end
+      end
+    end
+
+    addTempEvents()
+  else
+    local events = logic.event_recorder[eventType] or Util.DummyTable
+
+    for i = #events, 1, -1 do
+      local e = events[i]
+      if e.id <= end_id then break end
+
+      local damageStruct = e.data[1]
+      if damageStruct.dealtRecorderId then
+        if e.end_id == -1 or (endIdRecorded and endIdRecorded > e.end_id) then
+          local result = addTempEvents(true)
+          if result then
+            return ret
+          end
+
+          if func(e) then
+            table.insert(ret, e)
+          end    
+        else
+          endIdRecorded = e.end_id
+          if func(e) then
+            table.insert(tempEvents, e)
+          end
+        end
+
+        if #ret >= n then break end
+      end
+    end
+
+    addTempEvents(true)
+  end
+
+  return ret
+end
 
 dofile 'packages/utility/mobile_util.lua'
 
