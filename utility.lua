@@ -60,7 +60,8 @@ end
 ---@param room Room
 ---@param player ServerPlayer @ 使用来源
 ---@param card Card @ 被使用的卡牌
----@param times_limited boolean|nil @ 是否有次数限制
+---@param times_limited? boolean @ 是否有次数限制
+---@return bool
 Utility.canUseCard = function(room, player, card, times_limited)
   if player:prohibitUse(card) then return false end
   if not times_limited then
@@ -78,8 +79,9 @@ end
 ---@param from ServerPlayer @ 使用来源
 ---@param to ServerPlayer @ 目标角色
 ---@param card Card @ 被使用的卡牌
----@param distance_limited boolean|nil @ 是否有距离关系的限制
----@param times_limited boolean|nil @ 是否有次数限制
+---@param distance_limited? boolean @ 是否有距离关系的限制
+---@param times_limited? boolean @ 是否有次数限制
+---@return bool
 Utility.canUseCardTo = function(room, from, to, card, distance_limited, times_limited)
   if from:prohibitUse(card) or from:isProhibited(to, card) then return false end
   if not times_limited then
@@ -95,8 +97,8 @@ end
 -- 获取使用牌的合法额外目标（【借刀杀人】等带副目标的卡牌除外）
 ---@param room Room
 ---@param data CardUseStruct @ 使用事件的data
----@param bypass_distances boolean|nil @ 是否无距离关系的限制
----@param use_AimGroup boolean|nil @ 某些场合需要使用AimGroup，by smart Ho-spair
+---@param bypass_distances boolean? @ 是否无距离关系的限制
+---@param use_AimGroup boolean? @ 某些场合需要使用AimGroup，by smart Ho-spair
 ---@return integer[] @ 返回满足条件的player的id列表
 Utility.getUseExtraTargets = function(room, data, bypass_distances, use_AimGroup)
   if not (data.card.type == Card.TypeBasic or data.card:isCommonTrick()) then return {} end
@@ -256,7 +258,7 @@ end
 --- 判断一张牌能否移动至某角色的装备区
 ---@param target Player @ 接受牌的角色
 ---@param cardId integer @ 移动的牌
----@param convert boolean|nil @ 是否可以替换装备（默认可以）
+---@param convert? boolean @ 是否可以替换装备（默认可以）
 ---@return boolean 
 Utility.canMoveCardIntoEquip = function(target, cardId, convert)
   convert = (convert == nil) and true or convert
@@ -274,9 +276,9 @@ end
 ---@param room Room @ 房间
 ---@param target ServerPlayer @ 接受牌的角色
 ---@param cards integer|integer[] @ 移动的牌
----@param skillName string|nil @ 技能名
----@param convert boolean|nil @ 是否可以替换装备（默认可以）
----@param proposer ServerPlayer|nil @ 操作者
+---@param skillName? string @ 技能名
+---@param convert? boolean @ 是否可以替换装备（默认可以）
+---@param proposer? ServerPlayer @ 操作者
 Utility.moveCardIntoEquip = function (room, target, cards, skillName, convert, proposer)
   convert = (convert == nil) and true or convert
   skillName = skillName or ""
@@ -314,7 +316,7 @@ Fk:loadTranslationTable{
 ---@param cards1 integer[] @ 第一行的卡牌
 ---@param cards2 integer[] @ 第二行的卡牌
 ---@param prompt string @ 操作提示（FXIME:暂时无效）
----@param n integer|null @ 至多可交换的卡牌数量（不填或负数则无限制）
+---@param n? integer @ 至多可交换的卡牌数量（不填或负数则无限制）
 ---@return integer[]
 Utility.askForExchange = function(player, name1, name2, cards1, cards2, prompt, n)
   n = n or -1
@@ -360,10 +362,10 @@ Fk:loadTranslationTable{
 ---@param choices string[] @ 可选选项列表（在min和max范围内选择cards里的牌才会被点亮的选项）
 ---@param skillname string @ 烧条技能名
 ---@param prompt string @ 操作提示
----@param cancel_choices string[]|nil @ 可选选项列表（不选择牌时的选项）
----@param min integer|nil  @ 最小选牌数（默认为1）
----@param max integer|nil  @ 最大选牌数（默认为1）
----@param all_cards integer[]|nil  @ 会显示的所有卡牌
+---@param cancel_choices? string[] @ 可选选项列表（不选择牌时的选项）
+---@param min? integer  @ 最小选牌数（默认为1）
+---@param max? integer  @ 最大选牌数（默认为1）
+---@param all_cards? integer[]  @ 会显示的所有卡牌
 ---@return integer[], string
 Utility.askforChooseCardsAndChoice = function(player, cards, choices, skillname, prompt, cancel_choices, min, max, all_cards)
   cancel_choices = (cancel_choices == nil) and {} or cancel_choices
@@ -399,7 +401,7 @@ end
 ---@param cards integer[] @ 待选卡牌
 ---@param choices string[] @ 可选选项列表
 ---@param skillname string @ 烧条技能名
----@param prompt string|nil @ 操作提示
+---@param prompt? string @ 操作提示
 ---@return string
 Utility.askforViewCardsAndChoice = function(player, cards, choices, skillname, prompt)
   local _, result = Utility.askforChooseCardsAndChoice(player, cards, {}, skillname, prompt or "#AskForChoice", choices)
@@ -409,8 +411,8 @@ end
 --- 让玩家观看一些卡牌（用来取代fillAG式观看）。
 ---@param player ServerPlayer @ 要询问的玩家
 ---@param cards integer[] @ 待选卡牌
----@param skillname string|nil @ 烧条技能名
----@param prompt string|nil @ 操作提示
+---@param skillname? string @ 烧条技能名
+---@param prompt? string @ 操作提示
 Utility.viewCards = function(player, cards, skillname, prompt)
   Utility.askforChooseCardsAndChoice(player, cards, {}, skillname or "utility_viewcards", prompt or "$ViewCards", {"OK"})
 end
@@ -424,8 +426,8 @@ Fk:loadTranslationTable{
 --- 将一些卡牌同时分配给一些角色。请确保这些牌的所有者一致
 ---@param room Room @ 房间
 ---@param list table<integer[]> @ 分配牌和角色的数据，键为字符串化的角色id，值为分配给其的牌
----@param proposer integer|nil @ 操作者的id
----@param skillName string|nil @ 技能名
+---@param proposer? integer @ 操作者的id
+---@param skillName? string @ 技能名
 Utility.doDistribution = function (room, list, proposer, skillName)
   skillName = skillName or "distribution_skill"
   local moveInfos = {}
@@ -456,12 +458,12 @@ end
 ---@param player ServerPlayer @ 要询问的玩家
 ---@param cards integer[] @ 要分配的卡牌
 ---@param targets ServerPlayer[] @ 可以获得卡牌的角色
----@param skillName string|nil @ 技能名，影响焦点信息。默认为“分配”
----@param minNum integer|nil @ 最少交出的卡牌数，默认0
----@param maxNum integer|nil @ 最多交出的卡牌数，默认所有牌
----@param prompt string|nil @ 询问提示信息
----@param expand_pile string|nil @ 可选私人牌堆名称，如要分配你武将牌上的牌请填写
----@param skipMove boolean|nil @ 是否跳过移动。默认不跳过
+---@param skillName? string @ 技能名，影响焦点信息。默认为“分配”
+---@param minNum? integer @ 最少交出的卡牌数，默认0
+---@param maxNum? integer @ 最多交出的卡牌数，默认所有牌
+---@param prompt? string @ 询问提示信息
+---@param expand_pile? string @ 可选私人牌堆名称，如要分配你武将牌上的牌请填写
+---@param skipMove? boolean @ 是否跳过移动。默认不跳过
 ---@return table<integer[]> @ 返回一个表，键为字符串化的角色id，值为分配给其的牌
 Utility.askForDistribution = function(player, cards, targets, skillName, minNum, maxNum, prompt, expand_pile, skipMove)
   local room = player.room
@@ -537,15 +539,15 @@ Fk:loadTranslationTable{
 ---@param room Room @ 房间
 ---@param player ServerPlayer @ 要询问的玩家
 ---@param name string @ 使用虚拟卡名
----@param selected_subcards integer[]|nil @ 虚拟牌的子牌，默认空
----@param skillName string|nil @ 技能名
----@param prompt string|nil @ 询问提示信息。默认为：请视为使用xx
----@param cancelable boolean|nil @ 是否可以取消，默认可以。请勿给借刀设置不可取消
----@param bypass_distances boolean|nil @ 是否无距离限制。默认有
----@param extraUse boolean|nil @ 是否不计入次数。默认不计入
----@param extra_data table|nil @ 额外信息，因技能而异了
----@param skipUse boolean|nil @ 是否跳过使用。默认不跳过
----@return CardUseStruct|nil @ 返回卡牌使用框架
+---@param selected_subcards? integer[] @ 虚拟牌的子牌，默认空
+---@param skillName? string @ 技能名
+---@param prompt? string @ 询问提示信息。默认为：请视为使用xx
+---@param cancelable? boolean @ 是否可以取消，默认可以。请勿给借刀设置不可取消
+---@param bypass_distances? boolean @ 是否无距离限制。默认有
+---@param extraUse? boolean @ 是否不计入次数。默认不计入
+---@param extra_data? table @ 额外信息，因技能而异了
+---@param skipUse? boolean @ 是否跳过使用。默认不跳过
+---@return CardUseStruct @ 返回卡牌使用框架
 Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, skillName, prompt, cancelable, bypass_distances, extraUse, extra_data, skipUse)
   selected_subcards = selected_subcards or {}
   extraUse = (extraUse == nil) and true or extraUse
@@ -644,12 +646,12 @@ end
 --- 询问玩家使用一张手牌中的实体卡。注意此函数不判断使用次数限制
 ---@param room Room @ 房间
 ---@param player ServerPlayer @ 要询问的玩家
----@param cards integer[]|nil @ 可以使用的卡牌，默认为所有手牌
----@param pattern string|nil @ 选卡规则，与可选卡牌取交集
----@param skillName string|nil @ 技能名
----@param prompt string|nil @ 询问提示信息。默认为：请视为使用一张牌
----@param extra_data table|nil @ 额外信息，因技能而异了
----@param skipUse boolean|nil @ 是否跳过使用。默认不跳过
+---@param cards? integer[] @ 可以使用的卡牌，默认为所有手牌
+---@param pattern? string @ 选卡规则，与可选卡牌取交集
+---@param skillName? string @ 技能名
+---@param prompt? string @ 询问提示信息。默认为：请视为使用一张牌
+---@param extra_data? table @ 额外信息，因技能而异了
+---@param skipUse? boolean @ 是否跳过使用。默认不跳过
 ---@return CardUseStruct|nil @ 返回卡牌使用框架
 Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, prompt, extra_data, skipUse)
   cards = cards or player:getCardIds("h")
@@ -699,9 +701,55 @@ Fk:loadTranslationTable{
   ["#askForUseRealCard"] = "%arg：请使用一张牌",
 }
 
+--- 询问玩家使用一张牌（支持使用视为技）
+---
+--- 额外的，你不能使用自己的装备牌
+---@param room Room @ 房间
+---@param player ServerPlayer @ 要询问的玩家
+---@param cards? integer[] @ 可以使用的卡牌，默认包括手牌和“如手牌”
+---@param pattern? string @ 选卡规则，与可用卡牌取交集
+---@param skillName? string @ 技能名
+---@param prompt? string @ 询问提示信息。默认为：请视为使用一张牌
+---@param extra_data? table @ 额外信息，因技能而异了
+---@param skipUse? boolean @ 是否跳过使用。默认不跳过
+---@return CardUseStruct|nil @ 返回卡牌使用框架
+Utility.askForPlayCard = function(room, player, cards, pattern, skillName, prompt, extra_data, skipUse)
+  cards = cards or player:getHandlyIds(true)
+  pattern = pattern or "."
+  skillName = skillName or "#askForPlayCard"
+  prompt = prompt or ("##askForPlayCard:::"..skillName)
+  local useables = {} -- 可用牌名
+  for _, id in ipairs(Fk:getAllCardIds()) do
+    local card = Fk:getCardById(id)
+    if not player:prohibitUse(card) and player:canUse(card) then
+      table.insertIfNeed(useables, card.trueName)
+    end
+  end
+  local cardIds = player:getCardIds("e")
+  for _, cid in ipairs(cards) do
+    local card = Fk:getCardById(cid)
+    if not (Exppattern:Parse(pattern):match(card) and player:canUse(card) and not player:prohibitUse(card)) then
+      table.insert(cardIds, cid)
+    end
+  end
+  local strid = table.concat(cardIds, ",")
+  local useable_pattern = ".|.|.|.|" .. table.concat(useables, ",") .. "|.|" .. (strid == "" and "." or "^(" .. strid .. ")")
+  extra_data = extra_data or {}
+  local use = room:askForUseCard(player, skillName, useable_pattern, prompt, true, extra_data)
+  if not use then return end
+  if not skipUse then
+    room:useCard(use)
+  end
+  return use
+end
+Fk:loadTranslationTable{
+  ["#askForPlayCard"] = "使用牌",
+  ["##askForPlayCard"] = "%arg：请使用一张牌",
+}
+
 --- 判断一名角色是否为男性
 ---@param player Player @ 玩家
----@param realGender boolean|nil @ 是否获取真实性别，无视双性人。默认否
+---@param realGender? boolean @ 是否获取真实性别，无视双性人。默认否
 ---@return boolean
 Utility.isMale = function(player, realGender)
   return player.gender == General.Male or (not realGender and player.gender == General.Bigender)
@@ -710,7 +758,7 @@ end
 
 --- 判断一名角色是否为女性
 ---@param player Player @ 玩家
----@param realGender boolean|nil @ 是否获取真实性别，无视双性人。默认否
+---@param realGender? boolean @ 是否获取真实性别，无视双性人。默认否
 ---@return boolean
 Utility.isFemale = function(player, realGender)
   return player.gender == General.Female or (not realGender and player.gender == General.Bigender)
@@ -720,8 +768,8 @@ end
 --- 获得队友（注意：在客户端不能对暗身份角色生效）（或许对ai有用？）
 ---@param room Room @ 房间
 ---@param player ServerPlayer @ 自己
----@param include_self boolean|nil @ 是否包括自己。默认是
----@param include_dead boolean|nil @ 是否包括死亡角色。默认否
+---@param include_self? boolean @ 是否包括自己。默认是
+---@param include_dead? boolean @ 是否包括死亡角色。默认否
 ---@return ServerPlayer[] @ 玩家列表
 Utility.GetFriends = function(room, player, include_self, include_dead)
   include_self = include_self or true
@@ -753,7 +801,7 @@ end
 --- 获得敌人（注意：在客户端不能对暗身份角色生效）（或许对ai有用？）
 ---@param room Room @ 房间
 ---@param player ServerPlayer @ 自己
----@param include_dead boolean|nil @ 是否包括死亡角色。默认否
+---@param include_dead? boolean @ 是否包括死亡角色。默认否
 ---@return ServerPlayer[] @ 玩家列表
 Utility.GetEnemies = function(room, player, include_dead)
   local players = include_dead and room.players or room.alive_players
@@ -966,6 +1014,7 @@ local global_slash_targetmod = fk.CreateTargetModSkill{
 }
 Fk:addSkill(global_slash_targetmod)
 
+--- 获取实际的伤害事件
 Utility.getActualDamageEvents = function(room, n, func, scope, end_id)
   if not end_id then
     scope = scope or Player.HistoryTurn
