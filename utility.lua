@@ -1083,6 +1083,37 @@ Utility.getActualDamageEvents = function(room, n, func, scope, end_id)
   return ret
 end
 
+Utility.presentCard = function(player, target, card)
+  local room = player.room
+  if card.type ~= Card.TypeEquip then
+    room:moveCardTo(card, Card.PlayerHand, target, fk.ReasonGive, "present", nil, true, player.id)
+  else
+    if target:hasEmptyEquipSlot(card.sub_type) then
+      room:moveCardTo(card, Card.PlayerEquip, target, fk.ReasonGive, "present", nil, true, player.id)
+    elseif #target:getEquipments(card.sub_type) > 0 then
+      room:moveCards({
+        ids = target:getEquipments(card.sub_type),
+        from = target.id,
+        toArea = Card.DiscardPile,
+        moveReason = fk.ReasonJustMove,
+        skillName = "present",
+        proposer = player.id,
+      },
+      {
+        ids = {card.id},
+        from = player.id,
+        to = target.id,
+        toArea = Card.PlayerEquip,
+        moveReason = fk.ReasonJustMove,
+        skillName = "present",
+        proposer = player.id,
+      })
+    elseif #target:getAvailableEquipSlots(card.sub_type) == 0 then
+      room:moveCardTo(card, Card.DiscardPile, target, fk.ReasonJustMove, "present", nil, true, player.id)
+    end
+  end
+end
+
 dofile 'packages/utility/mobile_util.lua'
 
 return Utility
