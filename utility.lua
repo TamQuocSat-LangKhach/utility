@@ -437,10 +437,9 @@ Utility.doDistribution = function (room, list, proposer, skillName)
     local handcards = toP:getCardIds("h")
     cards = table.filter(cards, function (id) return not table.contains(handcards, id) end)
     if #cards > 0 then
-      local from = room:getCardOwner(cards[1])
       table.insert(moveInfos, {
       ids = cards,
-      from = from and from.id,
+      from = room.owner_map[cards[1]],
       to = to,
       toArea = Card.PlayerHand,
       moveReason = fk.ReasonGive,
@@ -454,7 +453,7 @@ Utility.doDistribution = function (room, list, proposer, skillName)
 end
 
 
---- 询问将卡牌分配给任意角色。请确保这些牌的所有者一致
+--- 询问将卡牌分配给任意角色。
 ---@param player ServerPlayer @ 要询问的玩家
 ---@param cards integer[] @ 要分配的卡牌
 ---@param targets ServerPlayer[] @ 可以获得卡牌的角色
@@ -464,27 +463,43 @@ end
 ---@param prompt? string @ 询问提示信息
 ---@param expand_pile? string @ 可选私人牌堆名称，如要分配你武将牌上的牌请填写
 ---@param skipMove? boolean @ 是否跳过移动。默认不跳过
----@return table<integer[]> @ 返回一个表，键为字符串化的角色id，值为分配给其的牌
-Utility.askForDistribution = function(player, cards, targets, skillName, minNum, maxNum, prompt, expand_pile, skipMove)
+---@param single_max? integer|table @ 限制每人能获得的最大牌数。输入整数或(以角色id为键以整数为值)的表
+---@return table<integer[]> @ 返回一个表，键为取整后字符串化的角色id，值为分配给其的牌
+Utility.askForDistribution = function(player, cards, targets, skillName, minNum, maxNum, prompt, expand_pile, skipMove, single_max)
   local room = player.room
   local _cards = table.simpleClone(cards)
   targets = table.map(targets, Util.IdMapper)
+  room:sortPlayersByAction(targets)
   skillName = skillName or "distribution_skill"
   minNum = minNum or 0
   maxNum = maxNum or #cards
   local getString = function(n) return string.format("%.0f", n) end
   local list = {}
-  for _, p in ipairs(targets) do
-    list[getString(p)] = {}
+  for _, pid in ipairs(targets) do
+    list[getString(pid)] = {}
   end
   local data = { expand_pile = expand_pile }
   room:setPlayerMark(player, "distribution_targets", targets)
+  local residueMap = {}
+  if type(single_max) == "table" then
+    for pid, v in pairs(single_max) do
+      residueMap[getString(pid)] = v
+    end
+  end
+  local residue_sum = 0
+  local residue_num = type(single_max) == "number" and single_max or 9999
+  for _, pid in ipairs(targets) do
+    local num = residueMap[getString(pid)] or residue_num
+    room:setPlayerMark(room:getPlayerById(pid), "distribution_residue", num)
+    residue_sum = residue_sum + num
+  end
+  minNum = math.min(minNum, #_cards, residue_sum)
   
   while maxNum > 0 and #_cards > 0 do
     room:setPlayerMark(player, "distribution_cards", _cards)
     room:setPlayerMark(player, "distribution_maxnum", maxNum)
     prompt = prompt or ("#distribution_skill:::"..minNum..":"..maxNum)
-    local success, dat = room:askForUseActiveSkill(player, "distribution_skill", prompt, minNum == 0, data, false)
+    local success, dat = room:askForUseActiveSkill(player, "distribution_skill", prompt, minNum == 0, data, true)
     if success and dat then
       local to = dat.targets[1]
       local give_cards = dat.cards
@@ -495,6 +510,7 @@ Utility.askForDistribution = function(player, cards, targets, skillName, minNum,
       end
       minNum = math.max(0, minNum - #give_cards)
       maxNum = maxNum - #give_cards
+      room:removePlayerMark(room:getPlayerById(to), "distribution_residue", #give_cards)
     else
       break
     end
@@ -503,10 +519,17 @@ Utility.askForDistribution = function(player, cards, targets, skillName, minNum,
   for _, id in ipairs(cards) do
     room:setCardMark(Fk:getCardById(id), "@distribution_to", 0)
   end
-  if minNum > 0 then
-    local p = table.random(targets)
-    local c = table.random(_cards, minNum)
-    table.insertTable(list[getString(p)], c)
+  for _, pid in ipairs(targets) do
+    if minNum == 0 or #_cards == 0 then break end
+    local p = room:getPlayerById(pid)
+    local num = math.min(p:getMark("distribution_residue"), minNum, #_cards)
+    if num > 0 then
+      for i = num, 1, -1 do
+        local c = table.remove(_cards, i)
+        table.insert(list[getString(pid)], c)
+        minNum = minNum - 1
+      end
+    end
   end
   if not skipMove then
     Utility.doDistribution(room, list, player.id, skillName)
@@ -524,6 +547,7 @@ local distribution_skill = fk.CreateActiveSkill{
   target_num = 1,
   target_filter = function(self, to_select, selected, selected_cards)
     return #selected == 0 and #selected_cards > 0 and table.contains(Self:getMark("distribution_targets"), to_select)
+    and #selected_cards <= (Fk:currentRoom():getPlayerById(to_select):getMark("distribution_residue"))
   end,
 }
 Fk:addSkill(distribution_skill)
