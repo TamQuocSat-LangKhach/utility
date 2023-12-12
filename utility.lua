@@ -568,9 +568,9 @@ Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, s
   extra_data = extra_data or {}
   extra_data.view_as_name = name
   extra_data.selected_subcards = selected_subcards
-  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1) end
+  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1) end -- FIX ME:缺少直接传入无限制的手段
   local success, dat = room:askForUseViewAsSkill(player, "virtual_viewas", prompt, cancelable, extra_data)
-  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end
+  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end -- FIX ME:缺少直接传入无限制的手段
   local tos = {}
   if success and dat then
     tos = dat.targets
@@ -659,7 +659,7 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   skillName = skillName or ""
   prompt = prompt or ("#askForUseRealCard:::"..skillName)
   local cardIds = {}
-  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 1)
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 1) -- FIX ME:缺少直接传入无限制的手段
   for _, cid in ipairs(cards) do
     local card = Fk:getCardById(cid)
     if Exppattern:Parse(pattern):match(card) then
@@ -671,7 +671,7 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   extra_data = extra_data or {}
   extra_data.optional_cards = cardIds
   local success, dat = room:askForUseViewAsSkill(player, "realcard_viewas", prompt, true, extra_data)
-  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0)
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0) -- FIX ME:缺少直接传入无限制的手段
   if not (success and dat) then return end
   local use = {
     from = player.id,
@@ -719,12 +719,23 @@ Utility.askForPlayCard = function(room, player, cards, pattern, skillName, promp
   skillName = skillName or "#askForPlayCard"
   prompt = prompt or ("##askForPlayCard:::"..skillName)
   local useables = {} -- 可用牌名
+  if extra_data then
+    if extra_data.bypass_distances then
+      room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1) -- FIX ME:缺少直接传入无限制的手段
+    end
+    if extra_data.bypass_times == nil or extra_data.bypass_times then
+      room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 1) -- FIX ME:缺少直接传入无限制的手段
+    end
+  end
   for _, id in ipairs(Fk:getAllCardIds()) do
     local card = Fk:getCardById(id)
     if not player:prohibitUse(card) and player:canUse(card) then
-      table.insertIfNeed(useables, card.trueName)
+      p(card.name)
+      table.insertIfNeed(useables, card.name)
     end
   end
+  room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) -- FIX ME:缺少直接传入无限制的手段
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0) -- FIX ME:缺少直接传入无限制的手段
   local cardIds = player:getCardIds("e")
   for _, cid in ipairs(cards) do
     local card = Fk:getCardById(cid)
