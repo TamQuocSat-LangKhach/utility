@@ -494,7 +494,7 @@ Utility.askForDistribution = function(player, cards, targets, skillName, minNum,
     residue_sum = residue_sum + num
   end
   minNum = math.min(minNum, #_cards, residue_sum)
-  
+
   while maxNum > 0 and #_cards > 0 do
     room:setPlayerMark(player, "distribution_cards", _cards)
     room:setPlayerMark(player, "distribution_maxnum", maxNum)
@@ -866,16 +866,17 @@ Utility.GetEnemies = function(room, player, include_dead)
 end
 
 
---[[
-  给卡牌上标记，用全局触发技监测，在一定时机销毁被标记的卡牌
 
-  DestructIntoDiscard 进入弃牌堆-OL蒲元
-  DestructOutMyEquip 离开自己的装备区-新服刘晔
-  DestructOutEquip 进入非装备区(可在装备区/处理区移动)-OL冯方女
---]]
+
+-- 卡牌标记 进入弃牌堆销毁 例OL蒲元
 MarkEnum.DestructIntoDiscard = "__destr_discard"
+
+-- 卡牌标记 离开自己的装备区销毁 例新服刘晔
 MarkEnum.DestructOutMyEquip = "__destr_my_equip"
+
+-- 卡牌标记 进入非装备区销毁(可在装备区/处理区移动) 例OL冯方女
 MarkEnum.DestructOutEquip = "__destr_equip"
+
 local CardDestructSkill = fk.CreateTriggerSkill{
   name = "#card_destruct_skill",
   global = true,
