@@ -5,8 +5,8 @@ local Utility = require 'packages/utility/_base'
 
 --- 更改某角色蓄力技的能量或能量上限
 ---@param player ServerPlayer @ 角色
----@param num integer|nil @ 改变的能量
----@param max integer|nil @ 改变的能量上限
+---@param num? integer @ 改变的能量
+---@param max? integer @ 改变的能量上限
 Utility.skillCharged = function(player, num, max)
     local room = player.room
     num = num or 0
@@ -31,8 +31,8 @@ Fk:loadTranslationTable{
 ---@param from_choices string[] @ 第一个角色的选项
 ---@param to_choices string[] @ 第二个角色的选项
 ---@param skillName string @ 技能名
----@param msg_type integer|nil @ 发送消息的类型 1:谋奕 2:对策 其他：不发送
----@param promots string|string[]|nil @ 询问选择时的提示信息
+---@param msg_type? integer @ 发送消息的类型 1:谋奕 2:对策 其他：不发送
+---@param promots? string|string[] @ 询问选择时的提示信息
 ---@return string[] @ 返回双方的选项
 Utility.doStrategy = function(room, from, to, from_choices, to_choices, skillName, msg_type, promots)
     msg_type = msg_type or 0
