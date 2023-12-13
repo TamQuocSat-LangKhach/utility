@@ -559,7 +559,7 @@ Fk:loadTranslationTable{
 
 
 
---- 询问玩家使用一张虚拟卡。注意此函数不判断使用次数限制
+--- 询问玩家使用一张虚拟卡
 ---@param room Room @ 房间
 ---@param player ServerPlayer @ 要询问的玩家
 ---@param name string @ 使用虚拟卡名
@@ -567,12 +567,13 @@ Fk:loadTranslationTable{
 ---@param skillName? string @ 技能名
 ---@param prompt? string @ 询问提示信息。默认为：请视为使用xx
 ---@param cancelable? boolean @ 是否可以取消，默认可以。请勿给借刀设置不可取消
+---@param bypass_times? boolean @ 是否无次数限制。默认有
 ---@param bypass_distances? boolean @ 是否无距离限制。默认有
 ---@param extraUse? boolean @ 是否不计入次数。默认不计入
 ---@param extra_data? table @ 额外信息，因技能而异了
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
 ---@return CardUseStruct @ 返回卡牌使用框架
-Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, skillName, prompt, cancelable, bypass_distances, extraUse, extra_data, skipUse)
+Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, skillName, prompt, cancelable, bypass_times, bypass_distances, extraUse, extra_data, skipUse)
   selected_subcards = selected_subcards or {}
   extraUse = (extraUse == nil) and true or extraUse
   skillName = skillName or ""
@@ -592,9 +593,11 @@ Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, s
   extra_data = extra_data or {}
   extra_data.view_as_name = name
   extra_data.selected_subcards = selected_subcards
-  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1) end -- FIXME: 缺少直接传入无限制的手段
+  if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) end
+  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1) end
   local success, dat = room:askForUseViewAsSkill(player, "virtual_viewas", prompt, cancelable, extra_data)
-  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end -- FIXME: 缺少直接传入无限制的手段
+  if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 0) end
+  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end
   local tos = {}
   if success and dat then
     tos = dat.targets
