@@ -1260,7 +1260,7 @@ function Utility.askForChooseCardsAndPlayers(self, player, minCardNum, maxCardNu
     local c = Fk:getCardById(id)
     return c:matchPattern(pattern)
   end)
-  if #pcards < minCardNum and not cancelable then return table.unpack({}, {}) end
+  if #pcards < minCardNum and not cancelable then return {}, {} end
 
   local data = {
     targets = targets,
