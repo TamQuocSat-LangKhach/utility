@@ -809,7 +809,9 @@ end
 ---@param include_dead? boolean @ 是否包括死亡角色。默认否
 ---@return ServerPlayer[] @ 玩家列表
 Utility.GetFriends = function(room, player, include_self, include_dead)
-  include_self = include_self or true
+  if include_self == nil then
+    include_self = true
+  end
   local players = include_dead and room.players or room.alive_players
   local friends = {player}
   if table.contains({"aaa_role_mode", "vanished_dragon", "zombie_mode"}, room.settings.gameMode) then
@@ -1286,6 +1288,21 @@ function Utility.askForChooseCardsAndPlayers(self, player, minCardNum, maxCardNu
   end
 end
 
+--抢救惑神智慧的临时措施
+local FixHospair = fk.CreateTriggerSkill{
+  name = "#FixHospair",
+  global = true,
+  mute = true,
+  refresh_events = {fk.TurnStart},
+  can_refresh = function (self, event, target, player, data)
+    return target == player
+  end,
+  on_refresh = function(self, event, target, player, data)
+    player.room:setPlayerMark(player, MarkEnum.BypassDistancesLimit.."-tmp", 0)
+    player.room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 0)
+  end,
+}
+Fk:addSkill(FixHospair)
 
 dofile 'packages/utility/mobile_util.lua'
 
