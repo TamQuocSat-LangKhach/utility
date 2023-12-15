@@ -423,11 +423,11 @@ Fk:loadTranslationTable{
 }
 
 
---- 将一些卡牌同时分配给一些角色。请确保这些牌的所有者一致
+--- 将一些卡牌同时分配给一些角色。
 ---@param room Room @ 房间
----@param list table<integer[]> @ 分配牌和角色的数据，键为字符串化的角色id，值为分配给其的牌
----@param proposer? integer @ 操作者的id
----@param skillName? string @ 技能名
+---@param list table<integer[]> @ 分配牌和角色的数据表，键为取整后字符串化的角色id，值为分配给其的牌
+---@param proposer? integer @ 操作者的id。默认为空
+---@param skillName? string @ 技能名。默认为“分配”
 Utility.doDistribution = function (room, list, proposer, skillName)
   skillName = skillName or "distribution_skill"
   local moveInfos = {}
@@ -436,15 +436,39 @@ Utility.doDistribution = function (room, list, proposer, skillName)
     local toP = room:getPlayerById(to)
     local handcards = toP:getCardIds("h")
     cards = table.filter(cards, function (id) return not table.contains(handcards, id) end)
+    local moveMap = {}
     if #cards > 0 then
-      table.insert(moveInfos, {
-      ids = cards,
-      from = room.owner_map[cards[1]],
-      to = to,
-      toArea = Card.PlayerHand,
-      moveReason = fk.ReasonGive,
-      proposer = proposer,
-      skillName = skillName,})
+      local noFrom = {}
+      for _, id in ipairs(cards) do
+        local from = room.owner_map[id]
+        if from then
+          moveMap[from] = moveMap[from] or {}
+          table.insert(moveMap[from], id)
+        else
+          table.insert(noFrom, id)
+        end
+      end
+      for from, _cards in pairs(moveMap) do
+        table.insert(moveInfos, {
+          ids = _cards,
+          from = from,
+          to = to,
+          toArea = Card.PlayerHand,
+          moveReason = fk.ReasonGive,
+          proposer = proposer,
+          skillName = skillName,
+        })
+      end
+      if #noFrom > 0 then
+        table.insert(moveInfos, {
+          ids = noFrom,
+          to = to,
+          toArea = Card.PlayerHand,
+          moveReason = fk.ReasonGive,
+          proposer = proposer,
+          skillName = skillName,
+        })
+      end
     end
   end
   if #moveInfos > 0 then
@@ -455,8 +479,8 @@ end
 
 --- 询问将卡牌分配给任意角色。
 ---@param player ServerPlayer @ 要询问的玩家
----@param cards integer[] @ 要分配的卡牌
----@param targets ServerPlayer[] @ 可以获得卡牌的角色
+---@param cards? integer[] @ 要分配的卡牌。默认拥有的所有牌
+---@param targets? ServerPlayer[] @ 可以获得卡牌的角色。默认所有存活角色
 ---@param skillName? string @ 技能名，影响焦点信息。默认为“分配”
 ---@param minNum? integer @ 最少交出的卡牌数，默认0
 ---@param maxNum? integer @ 最多交出的卡牌数，默认所有牌
@@ -467,6 +491,8 @@ end
 ---@return table<integer[]> @ 返回一个表，键为取整后字符串化的角色id，值为分配给其的牌
 Utility.askForDistribution = function(player, cards, targets, skillName, minNum, maxNum, prompt, expand_pile, skipMove, single_max)
   local room = player.room
+  targets = targets or room.alive_players
+  cards = cards or player:getCardIds("he")
   local _cards = table.simpleClone(cards)
   targets = table.map(targets, Util.IdMapper)
   room:sortPlayersByAction(targets)
