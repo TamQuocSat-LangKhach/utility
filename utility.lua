@@ -451,6 +451,9 @@ Utility.doDistribution = function (room, list, proposer, skillName)
       for from, _cards in pairs(moveMap) do
         table.insert(moveInfos, {
           ids = _cards,
+          moveInfo = table.map(_cards, function(id)
+            return {cardId = id, fromArea = room:getCardArea(id), fromSpecialName = room:getPlayerById(from):getPileNameOfId(id)}
+          end),
           from = from,
           to = to,
           toArea = Card.PlayerHand,
