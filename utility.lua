@@ -1304,6 +1304,63 @@ local FixHospair = fk.CreateTriggerSkill{
 }
 Fk:addSkill(FixHospair)
 
+-- 泛转化技能的牌名筛选，仅用于interaction里对泛转化牌名的合法性检测（按无对应实体牌的牌来校验）
+--
+-- 注：如果需要无距离和次数限制则需要外挂TargetModSkill（来点功能型card mark？）
+--
+---@param player Player @ 使用者Self
+---@param skill_name string @ 泛转化技的技能名
+---@param card_names string[] @ 待判定的牌名列表
+---@param subcards? string[] @ 子卡（某些技能可以提前确定子卡，如奇策、妙弦）
+---@return string[] @ 返回牌名列表
+Utility.getViewAsCardNames = function(player, skill_name, card_names, subcards)
+  if Fk.currentResponsePattern == nil then
+    return table.filter(card_names, function (name)
+      local card = Fk:cloneCard(name)
+      card.skillName = skill_name
+      if subcards then
+        card:addSubcards(subcards)
+      end
+      return player:canUse(card) and not player:prohibitUse(card)
+    end)
+  else
+    return table.filter(card_names, function (name)
+      local card = Fk:cloneCard(name)
+      card.skillName = skill_name
+      if subcards then
+        card:addSubcards(subcards)
+      end
+      return Exppattern:Parse(Fk.currentResponsePattern):match(card)
+    end)
+  end
+end
+
+-- 获取加入游戏的卡的牌名（暂不考虑装备牌），常用于泛转化技能的interaction
+---@param guhuo_type string @ 神杀智慧，用"btd"三个字母的组合表示卡牌的类别， b 基本牌, t - 普通锦囊牌, d - 延时锦囊牌
+---@param true_name? boolean @ 是否使用真实卡名（即不区分【杀】、【无懈可击】等的具体种类）
+---@return string[] @ 返回牌名列表
+Utility.getAllCardNames = function(guhuo_type, true_name)
+  local all_names = {}
+  for _, id in ipairs(Fk:getAllCardIds()) do
+    local card = Fk:getCardById(id)
+    if not card.is_derived and ((card.type == Card.TypeBasic and string.find(guhuo_type, "b")) or 
+    (card.type == Card.TypeTrick and string.find(guhuo_type, card.sub_type == Card.SubtypeDelayedTrick and "d" or "t"))) then
+      table.insertIfNeed(all_names, true_name and card.trueName or card.name)
+    end
+  end
+  return all_names
+end
+
+
+
+
+
+
+
+
+
+
+
 dofile 'packages/utility/mobile_util.lua'
 
 return Utility
