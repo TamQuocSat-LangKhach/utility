@@ -115,6 +115,69 @@ Utility.getUseExtraTargets = function(room, data, bypass_distances, use_AimGroup
   return tos
 end
 
+-- 判断是否能将当前结算的目标转移给一名角色（其实也有一些扩展用途，但必须在指定/成为目标时才能使用）
+-- 
+-- 注意：若此牌需指定副目标（如【借刀杀人】），则沿用当前目标的副目标，在后续添加目标时要将这些副目标也加上
+-- 
+---@param target ServerPlayer @ 即将被转移目标的角色
+---@param data AimStruct @ 使用事件的data
+---@param distance_limited? boolean @ 是否受距离限制
+---@return boolean
+Utility.canTransferTarget = function(target, data, distance_limited)
+  local room = target.room
+  local Notify_from = room:getPlayerById(data.from)
+  if Notify_from:isProhibited(target, data.card) or not data.card.skill:modTargetFilter(
+    target.id, {}, data.from, data.card, distance_limited
+  ) then return false end
+
+  --target_filter check, for collateral,diversion...
+  --FIXME：借刀需要补modTargetFilter，不给targetFilter传使用者真是离大谱，目前只能通过强制修改Self来实现
+  local ho_spair_target = data.subTargets
+  if type(ho_spair_target) == "table" then
+    local passed_target = {target.id}
+    Self = Notify_from
+    for c_pid in ipairs(ho_spair_target) do
+      if not data.card.skill:targetFilter(c_pid, passed_target, {}, data.card) then return false end
+      table.insert(passed_target, c_pid)
+    end
+  end
+  return true
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 获取目标对应的角色（不包括死亡角色且不计算重复目标）
+---@param room Room
+---@param data CardUseStruct @ 使用事件的data
+---@param event Event @ 使用事件的时机（需判断使用TargetGroup还是AimGroup，by smart Ho-spair）
+---@return integer[] @ 返回目标角色player的id列表
+Utility.getActualUseTargets = function(room, data, event)
+  if data.tos == nil then return {} end
+  local targets = {}
+  local tos = {}
+  if table.contains({ fk.TargetSpecifying, fk.TargetConfirming, fk.TargetSpecified, fk.TargetConfirmed }, event) then
+    tos = AimGroup:getAllTargets(data.tos)
+  else
+    tos = TargetGroup:getRealTargets(data.tos)
+  end
+  for _, p in ipairs(room.alive_players) do
+    if table.contains(tos, p.id) then
+      table.insertIfNeed(targets, p.id)
+    end
+  end
+  return targets
+end
+
 -- 判断一名角色为一个使用事件的唯一目标
 --
 -- 规则集描述为目标角色数为1，是不包括死亡角色且不计算重复目标的
@@ -147,8 +210,8 @@ Utility.isPureCard = function(card)
 end
 
 -- 判断一张虚拟牌是否有对应的实体牌（规则集定义）
----@param card Card @ 待判别的卡牌
 ---@param room Room
+---@param card Card @ 待判别的卡牌
 ---@return boolean
 Utility.hasFullRealCard = function(room, card)
   local cardlist = card:isVirtual() and card.subcards or {card.id}
