@@ -1196,6 +1196,8 @@ Utility.getActualDamageEvents = function(room, n, func, scope, end_id)
       start_event = event:findParent(GameEvent.Phase, true)
     end
 
+    if not start_event then return {} end
+
     local events = logic.event_recorder[eventType] or Util.DummyTable
     local from = start_event.id
     local to = start_event.end_id
