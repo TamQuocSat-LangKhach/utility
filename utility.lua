@@ -736,25 +736,24 @@ Fk:loadTranslationTable{
 ---@return boolean
 Utility.IsUsingHandcard = function(player, data)
   local cards = data.card:isVirtual() and data.card.subcards or {data.card.id}
-  if #cards == 0 then return end
-  local yes = false
+  if #cards == 0 then return false end
+  local yes = true
   local use = player.room.logic:getCurrentEvent()
   use:searchEvents(GameEvent.MoveCards, 1, function(e)
     if e.parent and e.parent.id == use.id then
       local subcheck = table.simpleClone(cards)
       for _, move in ipairs(e.data) do
-        if move.from == player.id and (move.moveReason == fk.ReasonUse or move.moveReason == fk.ReasonResonpse) then
+        if (move.moveReason == fk.ReasonUse or move.moveReason == fk.ReasonResonpse) then
           for _, info in ipairs(move.moveInfo) do
-            if table.removeOne(subcheck, info.cardId) and info.fromArea == Card.PlayerHand then
-              --continue
-            else
-              break
+            if table.removeOne(subcheck, info.cardId) and info.fromArea ~= Card.PlayerHand then
+              yes = false
+              return true
             end
           end
         end
       end
       if #subcheck == 0 then
-        yes = true
+        return true
       end
     end
   end)
@@ -1042,72 +1041,6 @@ Utility.ConvertSuit = function(value, input_type, output_type)
   }
   return mapper[output_type][table.indexOf(mapper[input_type], value)]
 end
-
---从键值对表中随机取N个值（每种最多取一个）
----@param cardDic table @ 卡表
----@param num number @ 要取出的数量
----@return table
-Utility.getRandomCards = function (cardDic, num)
-  local cardMap = table.simpleClone(cardDic)
-  local toObtain = {}
-  while #toObtain < num and next(cardMap) ~= nil do
-    local dicLength = 0
-    for _, ids in pairs(cardMap) do
-      dicLength = dicLength + #ids
-    end
-
-    local randomIdx = math.random(1, dicLength)
-    dicLength = 0
-    for key, ids in pairs(cardMap) do
-      dicLength = dicLength + #ids
-      if dicLength >= randomIdx then
-        table.insert(toObtain, ids[dicLength - randomIdx + 1])
-        cardMap[key] = nil
-        break
-      end
-    end
-  end
-  return toObtain
-end
-
--- 根据提供的卡表来印卡并保存到room.tag中，已有则直接读取
----@param room Room @ 房间
----@param cardDic table @ 卡表（卡名、花色、点数）
----@param name string @ 保存的tag名称
----@return table
-Utility.prepareDeriveCards = function (room, cardDic, name)
-  local cards = room:getTag(name)
-  if type(cards) == "table" then
-    return cards
-  end
-  cards = {}
-  for _, value in ipairs(cardDic) do
-    table.insert(cards, room:printCard(value[1], value[2], value[3]).id)
-  end
-  room:setTag(name, cards)
-  return cards
-end
-
--- 印一套基础牌堆中的卡（仅包含基本牌、锦囊牌，无花色点数）
----@param room Room @ 房间
----@return table
-Utility.prepareUniversalCards = function (room)
-  local cards = room:getTag("universal_cards")
-  if type(cards) == "table" then
-    return cards
-  end
-  local names = {}
-  for _, id in ipairs(Fk:getAllCardIds()) do
-    local card = Fk:getCardById(id)
-    if (card.type == Card.TypeBasic or card.type == Card.TypeTrick) and not card.is_derived then
-      table.insertIfNeed(names, card.trueName)
-    end
-  end
-  return Utility.prepareDeriveCards(room, table.map(names, function (name)
-    return {name, Card.NoSuit, 0}
-  end), "universal_cards")
-end
-
 
 
 ---增加标记数量的使用杀次数上限，可带后缀
@@ -1397,6 +1330,92 @@ local FixHospair = fk.CreateTriggerSkill{
   end,
 }
 Fk:addSkill(FixHospair)
+
+
+
+--从键值对表中随机取N个值（每种最多取一个）
+---@param cardDic table @ 卡表
+---@param num number @ 要取出的数量
+---@return table
+Utility.getRandomCards = function (cardDic, num)
+  local cardMap = table.simpleClone(cardDic)
+  local toObtain = {}
+  while #toObtain < num and next(cardMap) ~= nil do
+    local dicLength = 0
+    for _, ids in pairs(cardMap) do
+      dicLength = dicLength + #ids
+    end
+
+    local randomIdx = math.random(1, dicLength)
+    dicLength = 0
+    for key, ids in pairs(cardMap) do
+      dicLength = dicLength + #ids
+      if dicLength >= randomIdx then
+        table.insert(toObtain, ids[dicLength - randomIdx + 1])
+        cardMap[key] = nil
+        break
+      end
+    end
+  end
+  return toObtain
+end
+
+-- 根据提供的卡表来印卡并保存到room.tag中，已有则直接读取
+---@param room Room @ 房间
+---@param cardDic table @ 卡表（卡名、花色、点数）
+---@param name string @ 保存的tag名称
+---@return integer[]
+Utility.prepareDeriveCards = function (room, cardDic, name)
+  local cards = room:getTag(name)
+  if type(cards) == "table" then
+    return cards
+  end
+  cards = {}
+  for _, value in ipairs(cardDic) do
+    table.insert(cards, room:printCard(value[1], value[2], value[3]).id)
+  end
+  room:setTag(name, cards)
+  return cards
+end
+
+-- 印一套基础牌堆中的卡（仅包含基本牌、锦囊牌，无花色点数）
+---@param room Room @ 房间
+---@return integer[]
+Utility.prepareUniversalCards = function (room)
+  local cards = room:getTag("universal_cards")
+  if type(cards) == "table" then
+    return cards
+  end
+  local names = {}
+  for _, id in ipairs(Fk:getAllCardIds()) do
+    local card = Fk:getCardById(id)
+    if (card.type == Card.TypeBasic or card.type == Card.TypeTrick) and not card.is_derived then
+      table.insertIfNeed(names, card.name)
+    end
+  end
+  return Utility.prepareDeriveCards(room, table.map(names, function (name)
+    return {name, Card.NoSuit, 0}
+  end), "universal_cards")
+end
+
+-- 获取基础卡牌的复印卡
+---@param guhuo_type string @ 神杀智慧，用"btd"三个字母的组合表示卡牌的类别， b 基本牌, t - 普通锦囊牌, d - 延时锦囊牌
+---@param true_name? boolean @ 是否使用真实卡名（即不区分【杀】、【无懈可击】等的具体种类）
+---@return integer[]
+Utility.getUniversalCards = function(room, guhuo_type, true_name)
+  local all_names, cards = {}, {}
+  for _, id in ipairs(Utility.prepareUniversalCards(room)) do
+    local card = Fk:getCardById(id)
+    if not card.is_derived and ((card.type == Card.TypeBasic and string.find(guhuo_type, "b")) or
+    (card.type == Card.TypeTrick and string.find(guhuo_type, card.sub_type == Card.SubtypeDelayedTrick and "d" or "t"))) then
+      if not (true_name and table.contains(all_names, card.trueName)) then
+        table.insert(all_names, card.trueName)
+        table.insert(cards, id)
+      end
+    end
+  end
+  return cards
+end
 
 -- 泛转化技能的牌名筛选，仅用于interaction里对泛转化牌名的合法性检测（按无对应实体牌的牌来校验）
 --
