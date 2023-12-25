@@ -33,16 +33,20 @@ GraphicsBox {
         if (ok_options.length == 0) return;
 
         if (selected) {
-          origY = origY - 20;
           root.selectedItem.push(name);
+          chosenInBox = true;
         } else {
-          origY = origY + 20;
           root.selectedItem.splice(root.selectedItem.indexOf(name), 1);
+          chosenInBox = false;
         }
         origX = x;
         goBack(true);
 
         root.updateCardSelectable();
+      }
+
+      onRightClicked: {
+        roomScene.startCheat("GeneralDetail", { generals: [modelData] });
       }
     }
   }
@@ -88,7 +92,7 @@ GraphicsBox {
       ColumnLayout {
         id: cardsList
         anchors.top: parent.top
-        anchors.topMargin: 25
+        anchors.topMargin: 20
 
         Row {
           spacing: 5
