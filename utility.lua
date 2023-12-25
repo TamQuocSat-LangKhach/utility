@@ -851,8 +851,6 @@ Utility.askForPlayCard = function(room, player, cards, pattern, skillName, promp
       table.insertIfNeed(useables, card.name)
     end
   end
-  room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) -- FIXME: 缺少直接传入无限制的手段
-  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0) -- FIXME: 缺少直接传入无限制的手段
   local cardIds = player:getCardIds("e")
   for _, cid in ipairs(cards) do
     local card = Fk:getCardById(cid)
@@ -860,8 +858,10 @@ Utility.askForPlayCard = function(room, player, cards, pattern, skillName, promp
       table.insert(cardIds, cid)
     end
   end
+  room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) -- FIXME: 缺少直接传入无限制的手段
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0) -- FIXME: 缺少直接传入无限制的手段
   local strid = table.concat(cardIds, ",")
-  local useable_pattern = ".|.|.|.|" .. table.concat(useables, ",") .. "|.|" .. (strid == "" and "." or "^(" .. strid .. ")")
+  local useable_pattern = table.concat(useables, ",") .. "|.|.|.|.|.|" .. (strid == "" and "." or "^(" .. strid .. ")")
   extra_data = extra_data or {}
   local use = room:askForUseCard(player, skillName, useable_pattern, prompt, true, extra_data)
   if not use then return end
