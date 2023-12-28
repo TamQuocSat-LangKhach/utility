@@ -1475,5 +1475,6 @@ end
 
 
 dofile 'packages/utility/mobile_util.lua'
+dofile 'packages/utility/qml_mark.lua'
 
 return Utility
