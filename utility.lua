@@ -1464,7 +1464,19 @@ Utility.getAllCardNames = function(guhuo_type, true_name)
   return all_names
 end
 
-
+--让一名角色的仅对自己可见的mark对所有角色都可见
+---@param player ServerPlayer @ 要公开标记的角色
+---@param name? string @ 要公开的标记名（不含前缀）
+Utility.showPrivateMark = function(player, name)
+  local room = player.room
+  local mark_name = "@[private]" .. name
+  room:setPlayerMark(player, "QMLMARKSHOWN_" .. mark_name, 1)
+  room:doBroadcastNotify("SetPlayerMark", json.encode{
+    player.id,
+    mark_name,
+    player:getMark(mark_name)
+  })
+end
 
 
 
