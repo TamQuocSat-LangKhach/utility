@@ -1478,6 +1478,20 @@ Utility.showPrivateMark = function(player, name)
   })
 end
 
+--清除一名角色手牌中的某种标记
+---@param player ServerPlayer @ 要清理标记的角色
+---@param name string @ 要清理的标记名
+Utility.clearHandMark = function(player, name)
+  local room = player.room
+  local card = nil
+  for _, id in ipairs(player:getCardIds(Player.Hand)) do
+    card = Fk:getCardById(id)
+    if card:getMark(name) > 0 then
+      room:setCardMark(card, name, 0)
+    end
+  end
+end
+
 
 
 
