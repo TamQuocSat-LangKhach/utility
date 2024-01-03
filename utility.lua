@@ -1492,7 +1492,7 @@ Utility.clearHandMark = function(player, name)
   end
 end
 
---- 执行额外回合（修复bug）
+--- 执行额外回合（修复getCurrentExtraTurnReason bug）
 ---@param player ServerPlayer
 ---@param delay? boolean
 ---@param skillName string
