@@ -977,7 +977,9 @@ local CardDestructSkill = fk.CreateTriggerSkill{
   global = true,
   mute = true,
   refresh_events = {fk.BeforeCardsMove},
-  can_refresh = Util.TrueFunc,
+  can_refresh = function (self, event, target, player, data)
+    return player == player.room.players[1]
+  end,
   on_refresh = function(self, event, target, player, data)
     local room = player.room
     local mirror_moves = {}
