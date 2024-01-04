@@ -664,7 +664,7 @@ Fk:loadTranslationTable{
 ---@param extraUse? boolean @ 是否不计入次数。默认不计入
 ---@param extra_data? table @ 额外信息，因技能而异了
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
----@return CardUseStruct @ 返回卡牌使用框架
+---@return CardUseStruct? @ 返回卡牌使用框架。若取消使用则返回空
 Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, skillName, prompt, cancelable, bypass_times, bypass_distances, extraUse, extra_data, skipUse)
   selected_subcards = selected_subcards or {}
   extraUse = (extraUse == nil) and true or extraUse
@@ -696,9 +696,9 @@ Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, s
   else
     if cancelable then return end
     if card.name == "collateral" then return end -- ignore collateral
-    local min_card_num = card.skill.min_target_num or 1
-    if min_card_num > 0 then -- exclude ex_nihilo, savage_assault
-      tos = table.random(targets, min_card_num)
+    local min_target_num = card.skill.min_target_num or 1
+    if min_target_num > 0 then -- exclude ex_nihilo, savage_assault
+      tos = table.random(targets, min_target_num)
     end
   end
   local use = {

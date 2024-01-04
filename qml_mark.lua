@@ -29,7 +29,7 @@ Fk:addQmlMark{
   how_to_show = function(name, value, p)
     if type(value) == "table" then
       if string.startsWith(name, "@[private]$") or string.startsWith(name, "@[private]&") then
-        return #value
+        return tostring(#value)
       end
       if Self == p or p:getMark("QMLMARKSHOWN_"..name) ~= 0 then
         return table.concat(table.map(value, function(_value)
@@ -39,7 +39,7 @@ Fk:addQmlMark{
     elseif Self == p or p:getMark("QMLMARKSHOWN_"..name) ~= 0 then
       return Fk:translate(value)
     end
-    return " "
+    return ""
   end,
 }
 
