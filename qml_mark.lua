@@ -39,7 +39,7 @@ Fk:addQmlMark{
     elseif Self == p or p:getMark("QMLMARKSHOWN_"..name) ~= 0 then
       return Fk:translate(value)
     end
-    return ""
+    return " "
   end,
 }
 
