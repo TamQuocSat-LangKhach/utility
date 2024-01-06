@@ -50,9 +50,7 @@ Fk:addQmlMark{
     if type(value) == "string" then
       return Fk:translate(value)
     elseif type(value) == "table" then
-      return table.concat(table.map(value, function(v)
-        return Fk:translate(v)
-      end), " ")
+      return tostring(#value)
     end
     return " "
   end,
