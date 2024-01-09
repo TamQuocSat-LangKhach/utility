@@ -169,19 +169,20 @@ Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distance
   end
   if #tos == 0 then return end
   local min_target_num = card.skill:getMinTargetNum()
-  if min_target_num == 0 then return {} end -- AOE trick or ex_nihilo
+  if min_target_num == 0 then return {} end -- for AOE trick, ex_nihilo, peach...
   local real_tos
-  if card.name == "collateral" then
-    for _, pid in ipairs(tos) do
-      local victims = {}
-      local from = room:getPlayerById(pid)
-      for _, victim in ipairs(room:getOtherPlayers(from)) do
-        if from:inMyAttackRange(victim) and not from:isProhibited(victim, Fk:cloneCard("slash")) then
-          table.insert(victims, victim.id)
+  if min_target_num == 2 then  -- for collateral, diversion...
+    Self = player -- for targetFilter check
+    for _, first_id in ipairs(tos) do
+      local seconds = {}
+      local first = room:getPlayerById(first_id)
+      for _, second in ipairs(room:getOtherPlayers(first)) do
+        if card.skill:targetFilter(second.id, {first_id}, {}, card) then
+          table.insert(seconds, second.id)
         end
       end
-      if #victims > 0 then
-        real_tos = {pid, table.random(victims)}
+      if #seconds > 0 then
+        real_tos = {first_id, table.random(seconds)}
         break
       end
     end
