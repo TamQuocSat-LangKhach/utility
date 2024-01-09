@@ -145,6 +145,52 @@ Utility.canTransferTarget = function(target, data, distance_limited)
 end
 
 
+-- 获得一名角色使用一张牌的默认目标。用于强制使用此牌时的默认值。
+---@param player ServerPlayer @ 使用者
+---@param card Card @ 使用的牌
+---@param bypass_times? boolean @ 是否无次数限制。默认受限制
+---@param bypass_distances? boolean @ 是否无距离限制。默认受限制
+---@return table<integer>? @ 返回表，元素为目标角色的id。返回空则为没有合法目标
+Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distances)
+  local room = player.room
+  if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) end --- FIXME
+  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1) end
+  local canUse = player:canUse(card) and not player:prohibitUse(card)
+  if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 0) end
+  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end
+  if not canUse then return end
+  local tos = {}
+  for _, p in ipairs(room.alive_players) do
+    if not player:isProhibited(p, card) then
+      if card.skill:modTargetFilter(p.id, {}, player.id, card, not bypass_distances) then
+        table.insert(tos, p.id)
+      end
+    end
+  end
+  if #tos == 0 then return end
+  local min_target_num = card.skill:getMinTargetNum()
+  if min_target_num == 0 then return {} end -- AOE trick or ex_nihilo
+  local real_tos
+  if card.name == "collateral" then
+    for _, pid in ipairs(tos) do
+      local victims = {}
+      local from = room:getPlayerById(pid)
+      for _, victim in ipairs(room:getOtherPlayers(from)) do
+        if from:inMyAttackRange(victim) and not from:isProhibited(victim, Fk:cloneCard("slash")) then
+          table.insert(victims, victim.id)
+        end
+      end
+      if #victims > 0 then
+        real_tos = {pid, table.random(victims)}
+        break
+      end
+    end
+  else
+    real_tos = table.random(tos, min_target_num)
+  end
+  return real_tos
+end
+
 
 
 
@@ -672,7 +718,7 @@ Fk:loadTranslationTable{
 Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, skillName, prompt, cancelable, bypass_times, bypass_distances, extraUse, extra_data, skipUse)
   selected_subcards = selected_subcards or {}
   extraUse = (extraUse == nil) and true or extraUse
-  skillName = skillName or ""
+  skillName = skillName or "virtual_viewas"
   prompt = prompt or ("#askForUseVirtualCard:::"..skillName..":"..name)
   cancelable = (cancelable == nil) and true or cancelable
   local card = Fk:cloneCard(name)
@@ -689,21 +735,25 @@ Utility.askForUseVirtualCard = function(room, player, name, selected_subcards, s
   extra_data = extra_data or {}
   extra_data.view_as_name = name
   extra_data.selected_subcards = selected_subcards
+  extra_data.skillName = skillName
+  local dat
   if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) end
   if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1) end
-  local success, dat = room:askForUseViewAsSkill(player, "virtual_viewas", prompt, cancelable, extra_data)
+  local canUse = player:canUse(card)
+  if canUse then
+    _, dat = room:askForUseViewAsSkill(player, "virtual_viewas", prompt, cancelable, extra_data)
+  end
   if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 0) end
   if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end
+  if not canUse then return end
   local tos = {}
-  if success and dat then
+  if dat then
     tos = dat.targets
   else
     if cancelable then return end
-    if card.name == "collateral" then return end -- ignore collateral
-    local min_target_num = card.skill.min_target_num or 1
-    if min_target_num > 0 then -- exclude ex_nihilo, savage_assault
-      tos = table.random(targets, min_target_num)
-    end
+    local temp = Utility.getDefaultTargets(player, card, bypass_times, bypass_distances)
+    if not temp then return end
+    tos = temp
   end
   local use = {
     from = player.id,
@@ -728,7 +778,7 @@ local virtual_viewas = fk.CreateViewAsSkill{
 }
 Fk:addSkill(virtual_viewas)
 Fk:loadTranslationTable{
-  ["virtual_viewas"] = "使用虚拟牌",
+  ["virtual_viewas"] = "视为使用",
   ["#askForUseVirtualCard"] = "%arg：请视为使用 %arg2",
 }
 
@@ -771,14 +821,14 @@ end
 ---@param cards? integer[] @ 可以使用的卡牌，默认为所有手牌
 ---@param pattern? string @ 选卡规则，与可选卡牌取交集
 ---@param skillName? string @ 技能名
----@param prompt? string @ 询问提示信息。默认为：请视为使用一张牌
+---@param prompt? string @ 询问提示信息。默认为：请使用一张牌
 ---@param extra_data? table @ 额外信息，因技能而异了
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
 ---@return CardUseStruct|nil @ 返回卡牌使用框架
 Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, prompt, extra_data, skipUse)
   cards = cards or player:getCardIds("h")
   pattern = pattern or "."
-  skillName = skillName or ""
+  skillName = skillName or "realcard_viewas"
   prompt = prompt or ("#askForUseRealCard:::"..skillName)
   local cardIds = {}
   room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 1) -- FIXME: 缺少直接传入无限制的手段
@@ -792,6 +842,7 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   end
   extra_data = extra_data or {}
   extra_data.optional_cards = cardIds
+  extra_data.skillName = skillName
   local success, dat = room:askForUseViewAsSkill(player, "realcard_viewas", prompt, true, extra_data)
   room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0) -- FIXME: 缺少直接传入无限制的手段
   if not (success and dat) then return end
