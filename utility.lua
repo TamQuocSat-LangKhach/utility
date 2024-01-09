@@ -491,16 +491,19 @@ Fk:loadTranslationTable{
 ---@param list table<integer[]> @ 分配牌和角色的数据表，键为取整后字符串化的角色id，值为分配给其的牌
 ---@param proposer? integer @ 操作者的id。默认为空
 ---@param skillName? string @ 技能名。默认为“分配”
+---@return table<integer[]> @ 返回成功分配的卡牌
 Utility.doDistribution = function (room, list, proposer, skillName)
   skillName = skillName or "distribution_skill"
   local moveInfos = {}
+  local move_ids = {}
   for str, cards in pairs(list) do
     local to = tonumber(str)
     local toP = room:getPlayerById(to)
     local handcards = toP:getCardIds("h")
     cards = table.filter(cards, function (id) return not table.contains(handcards, id) end)
-    local moveMap = {}
     if #cards > 0 then
+      table.insertTable(move_ids, cards)
+      local moveMap = {}
       local noFrom = {}
       for _, id in ipairs(cards) do
         local from = room.owner_map[id]
@@ -540,6 +543,7 @@ Utility.doDistribution = function (room, list, proposer, skillName)
   if #moveInfos > 0 then
     room:moveCards(table.unpack(moveInfos))
   end
+  return move_ids
 end
 
 
