@@ -824,12 +824,14 @@ end
 ---@param prompt? string @ 询问提示信息。默认为：请使用一张牌
 ---@param extra_data? table @ 额外信息，因技能而异了
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
----@return CardUseStruct|nil @ 返回卡牌使用框架
-Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, prompt, extra_data, skipUse)
+---@param cancelable? boolean @ 是否可以取消。默认可以取消
+---@return CardUseStruct? @ 返回卡牌使用框架。取消使用则返回空
+Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, prompt, extra_data, skipUse, cancelable)
   cards = cards or player:getCardIds("h")
   pattern = pattern or "."
   skillName = skillName or "realcard_viewas"
   prompt = prompt or ("#askForUseRealCard:::"..skillName)
+  if (cancelable == nil) then cancelable = true end
   local cardIds = {}
   room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 1) -- FIXME: 缺少直接传入无限制的手段
   for _, cid in ipairs(cards) do
@@ -843,9 +845,22 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   extra_data = extra_data or {}
   extra_data.optional_cards = cardIds
   extra_data.skillName = skillName
-  local success, dat = room:askForUseViewAsSkill(player, "realcard_viewas", prompt, true, extra_data)
+  local dat
+  if #cardIds > 0 then
+    _, dat = room:askForUseViewAsSkill(player, "realcard_viewas", prompt, cancelable, extra_data)
+  end
   room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0) -- FIXME: 缺少直接传入无限制的手段
-  if not (success and dat) then return end
+  if (not cancelable) and (not dat) then
+    for _, cid in ipairs(cardIds) do
+      local card = Fk:getCardById(cid)
+      local temp = Utility.getDefaultTargets(player, card, true, false)
+      if temp then
+        dat = {targets = temp, cards = {cid}}
+        break
+      end
+    end
+  end
+  if not dat then return end
   local use = {
     from = player.id,
     tos = table.map(dat.targets, function(p) return {p} end),
