@@ -4,18 +4,20 @@ import QtQuick
 import QtQuick.Layouts
 import Fk.Pages
 import Fk.RoomElement
+import Fk.Common
 
 GraphicsBox {
   id: root
 
   property var selected: []
-  property var active_skills: []
+  // property var active_skills: []
   property int min
   property int max
   property string prompt
+  property var generals
 
   title.text: Backend.translate(prompt !== "" ? processPrompt(prompt) : "$Choice")
-  width: 40 + Math.min(8, Math.max(4, active_skills.length)) * 88
+  width: 40 + Math.min(5, active_skills.count) * (88 + (generals ? 36 : 0))
   height: 230
 
   function processPrompt(prompt) {
@@ -39,25 +41,37 @@ GraphicsBox {
 
     GridLayout {
       Layout.alignment: Qt.AlignHCenter
-      columns: 8
+      columns: 5
       Repeater {
         id: skill_buttons
-        model: active_skills
+        model: ListModel {
+          id: active_skills
+        }
 
-        SkillButton {
-          skill: Backend.translate(modelData)
-          type: "active"
-          enabled: true
-          orig: modelData
+        RowLayout {
+          Avatar {
+            id: avatarPic
+            visible: _general != ""
+            Layout.preferredHeight: 36
+            Layout.preferredWidth: 36
+            general: _general
+          }
 
-          onPressedChanged: {
-            if (pressed) {
-              root.selected.push(orig);
-            } else {
-              root.selected.splice(root.selected.indexOf(orig), 1);
+          SkillButton {
+            skill: Backend.translate(name)
+            type: "active"
+            enabled: true
+            orig: name
+
+            onPressedChanged: {
+              if (pressed) {
+                root.selected.push(orig);
+              } else {
+                root.selected.splice(root.selected.indexOf(orig), 1);
+              }
+
+              root.updateSelectable();
             }
-
-            root.updateSelectable();
           }
         }
       }
@@ -96,12 +110,25 @@ GraphicsBox {
   }
 
   function loadData(data) {
-    const d = data;
-    active_skills = d[0];
-    min = d[1];
-    max = d[2];
-    prompt = d[3];
-  
+    let skills, i;
+    [skills, min, max, prompt, generals] = data;
+
+    if (!generals) {
+      for (i = 0; i < skills.length; i++) {
+        active_skills.append({
+          name: skills[i],
+          _general: "",
+        });
+      }
+    } else {
+      for (i = 0; i < skills.length; i++) {
+        active_skills.append({
+          name: skills[i],
+          _general: generals[i] ?? "",
+        });
+      }
+    }
+
     updateSelectable()
   }
 }
