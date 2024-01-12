@@ -1649,6 +1649,7 @@ Utility.Discussion = function(data)
 
     discussionData.results[p.id] = discussionData.results[p.id] or {}
     discussionData.results[p.id].toCard = discussionCard
+    discussionData.results[p.id].opinion = discussionCard.color
 
     p:showCards({discussionCard})
   end
@@ -1663,13 +1664,13 @@ Utility.Discussion = function(data)
       black = black + 1
     end
 
-    local singleDiscussionData = {
-      from = discussionData.from,
-      to = to,
-      toCard = result.toCard,
-      color = result.toCard:getColorString(),
-      reason = discussionData.reason,
-    }
+    -- local singleDiscussionData = {
+    --   from = discussionData.from,
+    --   to = to,
+    --   toCard = result.toCard,
+    --   color = result.toCard:getColorString(),
+    --   reason = discussionData.reason,
+    -- }
 
     --logic:trigger(fk.DiscussionResultConfirmed, nil, singleDiscussionData)
   end
@@ -1687,6 +1688,8 @@ Utility.Discussion = function(data)
     from = discussionData.from.id,
     arg = discussionResult
   }
+
+  logic:trigger("fk.DiscussionResultConfirmed", discussionData.from, discussionData)
 
   --if logic:trigger(fk.DiscussionFinished, discussionData.from, discussionData) then
   if logic:trigger("fk.DiscussionFinished", discussionData.from, discussionData) then
