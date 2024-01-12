@@ -100,7 +100,17 @@ GraphicsBox {
         width: 80
         height: 35
         text: Backend.translate("Show General Detail")
-        onClicked: roomScene.startCheat("../../packages/utility/qml/SkillDetail", { skills: root.selected.length > 0 ? root.selected : root.active_skills});
+        onClicked: {
+          let _skills = [];
+          if (root.selected.length > 0) {
+            _skills = root.selected;
+          } else {
+            for (let i = 0; i < active_skills.count; i++){
+              _skills.push(active_skills.get(i).name);
+            }
+          }
+          roomScene.startCheat("../../packages/utility/qml/SkillDetail", { skills: _skills});
+        }
       }
     }
   }
