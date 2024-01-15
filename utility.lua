@@ -1654,14 +1654,14 @@ Utility.Discussion = function(data)
 
     p:showCards({discussionCard})
   end
-  --logic:trigger(fk.DiscussionCardsDisplayed, nil, discussionData)
+  logic:trigger("fk.DiscussionCardsDisplayed", nil, discussionData)
 
   local red, black = 0, 0
   for toId, result in pairs(discussionData.results) do
     local to = room:getPlayerById(toId)
-    if result.toCard.color == Card.Red then
+    if result.opinion == Card.Red then
       red = red + 1
-    elseif result.toCard.color == Card.Black then
+    elseif result.opinion == Card.Black then
       black = black + 1
     end
 
