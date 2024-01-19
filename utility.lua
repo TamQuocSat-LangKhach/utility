@@ -710,9 +710,9 @@ Fk:loadTranslationTable{
 ---@param skillName? string @ 技能名
 ---@param prompt? string @ 询问提示信息。默认为：请视为使用xx
 ---@param cancelable? boolean @ 是否可以取消，默认可以。
----@param bypass_times? boolean @ 是否无次数限制。默认有
----@param bypass_distances? boolean @ 是否无距离限制。默认有
----@param extraUse? boolean @ 是否不计入次数。默认不计入
+---@param bypass_times? boolean @ 是否无次数限制。默认无次数限制
+---@param bypass_distances? boolean @ 是否无距离限制。默认有距离限制
+---@param extraUse? boolean @ 是否不计入次数。默认不计入次数
 ---@param extra_data? table @ 额外信息，因技能而异了
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
 ---@return CardUseStruct? @ 返回卡牌使用框架。若取消使用则返回空
@@ -722,10 +722,12 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
   skillName = skillName or "virtual_viewas"
   local all_names = type(name) == "table" and name or {name}
   cancelable = (cancelable == nil) and true or cancelable
+  bypass_times = (bypass_times == nil) and true or bypass_times
   extra_data = extra_data or {}
   extra_data.view_as_name = name
   extra_data.selected_subcards = subcards
   extra_data.skillName = skillName
+  extra_data.virtualuse_allnames = all_names
   if bypass_times then
     extra_data.bypass_times = true
     room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) -- FIXME
@@ -740,20 +742,20 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
     card.skillName = skillName
     return player:canUse(card) and not player:prohibitUse(card)
   end)
-  room:setPlayerMark(player, "virtual_vs_names", {names, all_names} )  -- FIXME
+  extra_data.virtualuse_names = names
   local dat
   if #names > 0 then
     if not prompt then
-      if #names == 1 then
-        prompt = ("#askForUseVirtualCard:::"..skillName..":"..name)
+      if #all_names == 1 then
+        prompt = ("#askForUseVirtualCard:::"..skillName..":"..all_names[1])
       else
         prompt = ("#askForUseVirtualCards:::"..skillName..":"..#names)
       end
     end
     _, dat = room:askForUseViewAsSkill(player, "virtual_viewas", prompt, cancelable, extra_data)
   end
-  if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 0) end
-  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end
+  if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 0) end -- FIXME
+  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end -- FIXME
   if #names == 0 then return end
   local card, tos
   if dat then
@@ -790,13 +792,12 @@ end
 local virtual_viewas = fk.CreateViewAsSkill{
   name = "virtual_viewas",
   card_filter = Util.FalseFunc,
-  interaction = function()
-    local mark = Self:getMark("virtual_vs_names")
-    return UI.ComboBox {choices = mark[1], all_choices = mark[2]}
+  interaction = function(self)
+    if #self.virtualuse_allnames == 1 then return end
+    return UI.ComboBox {choices = self.virtualuse_names, all_choices = self.virtualuse_allnames }
   end,
   view_as = function(self)
-    if not self.interaction.data then return end
-    local card = Fk:cloneCard(self.interaction.data)
+    local card = Fk:cloneCard(self.interaction.data and self.interaction.data or self.virtualuse_names[1])
     card:addSubcards(self.selected_subcards)
     return card
   end,
@@ -805,7 +806,7 @@ Fk:addSkill(virtual_viewas)
 Fk:loadTranslationTable{
   ["virtual_viewas"] = "视为使用",
   ["#askForUseVirtualCard"] = "%arg：请视为使用 %arg2",
-  ["#askForUseVirtualCards"] = "%arg：请视为使用一张牌（%arg2 种）",
+  ["#askForUseVirtualCards"] = "%arg：请视为使用一张牌（可选 %arg2 种）",
 }
 
 
