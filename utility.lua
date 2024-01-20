@@ -724,13 +724,12 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
   cancelable = (cancelable == nil) and true or cancelable
   bypass_times = (bypass_times == nil) and true or bypass_times
   extra_data = extra_data or {}
-  extra_data.view_as_name = name
   extra_data.selected_subcards = subcards
   extra_data.skillName = skillName
   extra_data.virtualuse_allnames = all_names
   if bypass_times then
     extra_data.bypass_times = true
-    room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) -- FIXME
+    room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) -- FIXME: delete when canUse updata
    end
   if bypass_distances then
     extra_data.bypass_distances = true
@@ -760,7 +759,7 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
   local card, tos
   if dat then
     tos = dat.targets
-    card = Fk:cloneCard(dat.interaction)
+    card = Fk:cloneCard(dat.interaction or names[1])
     card:addSubcards(subcards)
     card.skillName = skillName
   else
