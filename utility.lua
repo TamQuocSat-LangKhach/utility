@@ -717,6 +717,7 @@ Fk:loadTranslationTable{
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
 ---@return CardUseStruct? @ 返回卡牌使用框架。若取消使用则返回空
 Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName, prompt, cancelable, bypass_times, bypass_distances, extraUse, extra_data, skipUse)
+  if player.dead then return end
   subcards = subcards or {}
   extraUse = (extraUse == nil) and true or extraUse
   skillName = skillName or "virtual_viewas"
@@ -740,6 +741,7 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
     card:addSubcards(subcards)
     card.skillName = skillName
     return player:canUse(card) and not player:prohibitUse(card)
+    and Utility.getDefaultTargets(player, card, bypass_times, bypass_distances)
   end)
   extra_data.virtualuse_names = names
   local dat
