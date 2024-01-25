@@ -722,8 +722,8 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
   extraUse = (extraUse == nil) and true or extraUse
   skillName = skillName or "virtual_viewas"
   local all_names = type(name) == "table" and name or {name}
-  cancelable = (cancelable == nil) and true or cancelable
-  bypass_times = (bypass_times == nil) and true or bypass_times
+  if (cancelable == nil) then cancelable = true end
+  if (bypass_times == nil) then bypass_times = true end
   extra_data = extra_data or {}
   extra_data.selected_subcards = subcards
   extra_data.skillName = skillName
@@ -741,7 +741,9 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
     card:addSubcards(subcards)
     card.skillName = skillName
     return player:canUse(card) and not player:prohibitUse(card)
-    and Utility.getDefaultTargets(player, card, bypass_times, bypass_distances)
+    and table.find(room.alive_players, function (p)
+      return not player:isProhibited(p, card) and card.skill:modTargetFilter(p.id, {}, player.id, card, not bypass_distances)
+    end)
   end)
   extra_data.virtualuse_names = names
   local dat
@@ -799,6 +801,7 @@ local virtual_viewas = fk.CreateViewAsSkill{
   end,
   view_as = function(self)
     local card = Fk:cloneCard(self.interaction.data and self.interaction.data or self.virtualuse_names[1])
+    if self.skillName then card.skillName = self.skillName end
     card:addSubcards(self.selected_subcards)
     return card
   end,
