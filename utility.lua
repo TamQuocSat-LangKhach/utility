@@ -800,7 +800,7 @@ local virtual_viewas = fk.CreateViewAsSkill{
     return UI.ComboBox {choices = self.virtualuse_names, all_choices = self.virtualuse_allnames }
   end,
   view_as = function(self)
-    local card = Fk:cloneCard(self.interaction.data and self.interaction.data or self.virtualuse_names[1])
+    local card = Fk:cloneCard(self.interaction.data and self.interaction.data or self.virtualuse_allnames[1])
     if self.skillName then card.skillName = self.skillName end
     card:addSubcards(self.selected_subcards)
     return card
