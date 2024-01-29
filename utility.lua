@@ -64,13 +64,7 @@ end
 ---@return bool
 Utility.canUseCard = function(room, player, card, times_limited)
   if player:prohibitUse(card) then return false end
-  if not times_limited then
-    room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 1)
-  end
-  local can_use = player:canUse(card)
-  if not times_limited then
-    room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0)
-  end
+  local can_use = card.skill:canUse(player, card, { bypass_times = not times_limited })
   return can_use
 end
 
@@ -84,13 +78,7 @@ end
 ---@return bool
 Utility.canUseCardTo = function(room, from, to, card, distance_limited, times_limited)
   if from:prohibitUse(card) or from:isProhibited(to, card) then return false end
-  if not times_limited then
-    room:setPlayerMark(from, MarkEnum.BypassTimesLimit .. "-tmp", 1)
-  end
-  local can_use = from:canUse(card)
-  if not times_limited then
-    room:setPlayerMark(from, MarkEnum.BypassTimesLimit .. "-tmp", 0)
-  end
+  local can_use = card.skill:canUse(player, card, { bypass_times = not times_limited, bypass_distances = not distance_limited })
   return can_use and card.skill:modTargetFilter(to.id, {}, from.id, card, distance_limited)
 end
 
@@ -153,11 +141,7 @@ end
 ---@return table<integer>? @ 返回表，元素为目标角色的id。返回空则为没有合法目标
 Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distances)
   local room = player.room
-  if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) end --- FIXME
-  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1) end
-  local canUse = player:canUse(card) and not player:prohibitUse(card)
-  if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 0) end
-  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end
+  local canUse = card.skill:canUse(player, card, { bypass_times = bypass_times, bypass_distances = bypass_distances }) and not player:prohibitUse(card)
   if not canUse then return end
   local tos = {}
   for _, p in ipairs(room.alive_players) do
@@ -728,19 +712,13 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
   extra_data.selected_subcards = subcards
   extra_data.skillName = skillName
   extra_data.virtualuse_allnames = all_names
-  if bypass_times then
-    extra_data.bypass_times = true
-    room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) -- FIXME: delete when canUse updata
-   end
-  if bypass_distances then
-    extra_data.bypass_distances = true
-    room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1)  -- FIXME
-  end
+  extra_data.bypass_times = bypass_times
+  extra_data.bypass_distances = bypass_distances
   local names = table.filter(all_names, function (n)
     local card = Fk:cloneCard(n)
     card:addSubcards(subcards)
     card.skillName = skillName
-    return player:canUse(card) and not player:prohibitUse(card)
+    return card.skill:canUse(player, card, extra_data) and not player:prohibitUse(card)
     and table.find(room.alive_players, function (p)
       return not player:isProhibited(p, card) and card.skill:modTargetFilter(p.id, {}, player.id, card, not bypass_distances)
     end)
@@ -757,8 +735,6 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
     end
     _, dat = room:askForUseViewAsSkill(player, "virtual_viewas", prompt, cancelable, extra_data)
   end
-  if bypass_times then room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 0) end -- FIXME
-  if bypass_distances then room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) end -- FIXME
   if #names == 0 then return end
   local card, tos
   if dat then
@@ -864,23 +840,22 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   prompt = prompt or ("#askForUseRealCard:::"..skillName)
   if (cancelable == nil) then cancelable = true end
   local cardIds = {}
-  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 1) -- FIXME: 缺少直接传入无限制的手段
+  extra_data = extra_data or {}
+  extra_data.bypass_times = true
   for _, cid in ipairs(cards) do
     local card = Fk:getCardById(cid)
     if Exppattern:Parse(pattern):match(card) then
-      if player:canUse(card) and not player:prohibitUse(card) then
+      if card.skill:canUse(player, card, extra_data) and not player:prohibitUse(card) then
         table.insert(cardIds, cid)
       end
     end
   end
-  extra_data = extra_data or {}
   extra_data.optional_cards = cardIds
   extra_data.skillName = skillName
   local dat
   if #cardIds > 0 then
     _, dat = room:askForUseViewAsSkill(player, "realcard_viewas", prompt, cancelable, extra_data)
   end
-  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0) -- FIXME: 缺少直接传入无限制的手段
   if (not cancelable) and (not dat) then
     for _, cid in ipairs(cardIds) do
       local card = Fk:getCardById(cid)
@@ -938,29 +913,19 @@ Utility.askForPlayCard = function(room, player, cards, pattern, skillName, promp
   skillName = skillName or "#askForPlayCard"
   prompt = prompt or ("##askForPlayCard:::"..skillName)
   local useables = {} -- 可用牌名
-  if extra_data then
-    if extra_data.bypass_distances then
-      room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1) -- FIXME: 缺少直接传入无限制的手段
-    end
-    if extra_data.bypass_times == nil or extra_data.bypass_times then
-      room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 1) -- FIXME: 缺少直接传入无限制的手段
-    end
-  end
   for _, id in ipairs(Fk:getAllCardIds()) do
     local card = Fk:getCardById(id)
-    if not player:prohibitUse(card) and player:canUse(card) then
+    if not player:prohibitUse(card) and card.skill:canUse(player, card, extra_data) then
       table.insertIfNeed(useables, card.name)
     end
   end
   local cardIds = player:getCardIds("e")
   for _, cid in ipairs(cards) do
     local card = Fk:getCardById(cid)
-    if not (Exppattern:Parse(pattern):match(card) and player:canUse(card) and not player:prohibitUse(card)) then
+    if not (Exppattern:Parse(pattern):match(card) and card.skill:canUse(player, card, extra_data) and not player:prohibitUse(card)) then
       table.insert(cardIds, cid)
     end
   end
-  room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0) -- FIXME: 缺少直接传入无限制的手段
-  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0) -- FIXME: 缺少直接传入无限制的手段
   local strid = table.concat(cardIds, ",")
   local useable_pattern = table.concat(useables, ",") .. "|.|.|.|.|.|" .. (strid == "" and "." or "^(" .. strid .. ")")
   extra_data = extra_data or {}
