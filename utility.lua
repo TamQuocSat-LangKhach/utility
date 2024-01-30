@@ -78,7 +78,7 @@ end
 ---@return bool
 Utility.canUseCardTo = function(room, from, to, card, distance_limited, times_limited)
   if from:prohibitUse(card) or from:isProhibited(to, card) then return false end
-  local can_use = card.skill:canUse(player, card, { bypass_times = not times_limited, bypass_distances = not distance_limited })
+  local can_use = card.skill:canUse(from, card, { bypass_times = not times_limited, bypass_distances = not distance_limited })
   return can_use and card.skill:modTargetFilter(to.id, {}, from.id, card, distance_limited)
 end
 
