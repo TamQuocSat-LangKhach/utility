@@ -718,11 +718,21 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
     local card = Fk:cloneCard(n)
     card:addSubcards(subcards)
     card.skillName = skillName
+    if bypass_times then
+      extra_data.bypass_times = true
+      room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) -- FIXME: delete when canUse update
+     end
+    if bypass_distances then
+      extra_data.bypass_distances = true
+      room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1)  -- FIXME
+    end
     return card.skill:canUse(player, card, extra_data) and not player:prohibitUse(card)
     and table.find(room.alive_players, function (p)
       return not player:isProhibited(p, card) and card.skill:modTargetFilter(p.id, {}, player.id, card, not bypass_distances)
     end)
   end)
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0)  -- FIXME
+  room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0)  -- FIXME
   extra_data.virtualuse_names = names
   local dat
   if #names > 0 then
