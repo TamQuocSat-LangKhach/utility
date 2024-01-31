@@ -64,7 +64,11 @@ end
 ---@return bool
 Utility.canUseCard = function(room, player, card, times_limited)
   if player:prohibitUse(card) then return false end
+  if not times_limited then
+    room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) -- FIXME: delete when canUse update
+  end
   local can_use = card.skill:canUse(player, card, { bypass_times = not times_limited })
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 0) -- FIXME
   return can_use
 end
 
@@ -78,7 +82,15 @@ end
 ---@return bool
 Utility.canUseCardTo = function(room, from, to, card, distance_limited, times_limited)
   if from:prohibitUse(card) or from:isProhibited(to, card) then return false end
+  if not times_limited then
+    room:setPlayerMark(from, MarkEnum.BypassTimesLimit.."-tmp", 1) -- FIXME: delete when canUse update
+   end
+  if not distance_limited then
+    room:setPlayerMark(from, MarkEnum.BypassDistancesLimit .. "-tmp", 1)  -- FIXME
+  end
   local can_use = card.skill:canUse(from, card, { bypass_times = not times_limited, bypass_distances = not distance_limited })
+  room:setPlayerMark(from, MarkEnum.BypassTimesLimit.."-tmp", 0) -- FIXME
+  room:setPlayerMark(from, MarkEnum.BypassDistancesLimit.."-tmp", 0) -- FIXME
   return can_use and card.skill:modTargetFilter(to.id, {}, from.id, card, distance_limited)
 end
 
@@ -141,8 +153,16 @@ end
 ---@return table<integer>? @ 返回表，元素为目标角色的id。返回空则为没有合法目标
 Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distances)
   local room = player.room
+  if bypass_times then
+    room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) -- FIXME: delete when canUse update
+   end
+  if bypass_distances then
+    room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1)  -- FIXME
+  end
   local canUse = card.skill:canUse(player, card, { bypass_times = bypass_times, bypass_distances = bypass_distances }) and not player:prohibitUse(card)
   if not canUse then return end
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0)  -- FIXME
+  room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0)  -- FIXME
   local tos = {}
   for _, p in ipairs(room.alive_players) do
     if not player:isProhibited(p, card) then
@@ -852,6 +872,12 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   local cardIds = {}
   extra_data = extra_data or {}
   extra_data.bypass_times = true
+  if extra_data.bypass_times then
+    room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) -- FIXME: delete when canUse update
+   end
+  if extra_data.bypass_distances then
+    room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1)  -- FIXME
+  end
   for _, cid in ipairs(cards) do
     local card = Fk:getCardById(cid)
     if Exppattern:Parse(pattern):match(card) then
@@ -860,6 +886,8 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
       end
     end
   end
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0)  -- FIXME
+  room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0)  -- FIXME
   extra_data.optional_cards = cardIds
   extra_data.skillName = skillName
   local dat
@@ -923,6 +951,12 @@ Utility.askForPlayCard = function(room, player, cards, pattern, skillName, promp
   skillName = skillName or "#askForPlayCard"
   prompt = prompt or ("##askForPlayCard:::"..skillName)
   local useables = {} -- 可用牌名
+  if extra_data and extra_data.bypass_times then
+    room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 1) -- FIXME: delete when canUse update
+   end
+  if extra_data and extra_data.bypass_distances then
+    room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 1)  -- FIXME
+  end
   for _, id in ipairs(Fk:getAllCardIds()) do
     local card = Fk:getCardById(id)
     if not player:prohibitUse(card) and card.skill:canUse(player, card, extra_data) then
@@ -936,6 +970,8 @@ Utility.askForPlayCard = function(room, player, cards, pattern, skillName, promp
       table.insert(cardIds, cid)
     end
   end
+  room:setPlayerMark(player, MarkEnum.BypassTimesLimit .. "-tmp", 0)  -- FIXME
+  room:setPlayerMark(player, MarkEnum.BypassDistancesLimit .. "-tmp", 0)  -- FIXME
   local strid = table.concat(cardIds, ",")
   local useable_pattern = table.concat(useables, ",") .. "|.|.|.|.|.|" .. (strid == "" and "." or "^(" .. strid .. ")")
   extra_data = extra_data or {}
