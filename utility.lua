@@ -1157,7 +1157,7 @@ local global_slash_targetmod = fk.CreateTargetModSkill{
   global = true,
   residue_func = function(self, player, skill, scope)
     if skill.trueName == "slash_skill" and scope == Player.HistoryPhase then
-      local num = 0
+      local num = player:getMark(MarkEnum.SlashResidue)
       for _, s in ipairs(MarkEnum.TempMarkSuffix) do
         num = num + player:getMark(MarkEnum.SlashResidue..s)
       end
@@ -1166,14 +1166,16 @@ local global_slash_targetmod = fk.CreateTargetModSkill{
   end,
   bypass_times = function(self, player, skill, scope)
     if skill.trueName == "slash_skill" and scope == Player.HistoryPhase then
-      return table.find(MarkEnum.TempMarkSuffix, function(s)
+      return player:getMark(MarkEnum.SlashBypassTimes) ~= 0 or
+      table.find(MarkEnum.TempMarkSuffix, function(s)
         return player:getMark(MarkEnum.SlashBypassTimes .. s) ~= 0
       end)
     end
   end,
   bypass_distances = function (self, player, skill)
     if skill.trueName == "slash_skill" then
-      return table.find(MarkEnum.TempMarkSuffix, function(s)
+      return player:getMark(MarkEnum.SlashBypassDistances) ~= 0 or
+      table.find(MarkEnum.TempMarkSuffix, function(s)
         return player:getMark(MarkEnum.SlashBypassDistances .. s) ~= 0
       end)
     end
@@ -1416,24 +1418,6 @@ function Utility.askForChooseCardsAndPlayers(self, player, minCardNum, maxCardNu
     end
   end
 end
-
---抢救惑神智慧的临时措施
-local FixHospair = fk.CreateTriggerSkill{
-  name = "#FixHospair",
-  global = true,
-  mute = true,
-  refresh_events = {fk.TurnStart},
-  can_refresh = function (self, event, target, player, data)
-    return target == player
-  end,
-  on_refresh = function(self, event, target, player, data)
-    player.room:setPlayerMark(player, MarkEnum.BypassDistancesLimit.."-tmp", 0)
-    player.room:setPlayerMark(player, MarkEnum.BypassTimesLimit.."-tmp", 0)
-  end,
-}
-Fk:addSkill(FixHospair)
-
-
 
 --从键值对表中随机取N个值（每种最多取一个）
 ---@param cardDic table @ 卡表
