@@ -368,6 +368,40 @@ Utility.getMark = function(player, mark)
   return type(player:getMark(mark)) == "table" and player:getMark(mark) or {}
 end
 
+-- 获取角色对应私人Mark的实际值并初始化为table
+---@param player Player @ 要被获取标记的那个玩家
+---@param name string @ 标记名称（不带前缀）
+---@return table
+Utility.getPrivateMark = function(player, name)
+  return type(player:getMark("@[private]" .. name)) == "table" and player:getMark("@[private]" .. name).value or {}
+end
+
+-- 设置角色对应私人Mark
+---@param player ServerPlayer @ 要被获取标记的那个玩家
+---@param name string @ 标记名称（不带前缀）
+---@param value table @ 标记实际值
+---@param players? integer[] @ 公开标记的角色，若为nil则为仅对自己可见
+Utility.setPrivateMark = function(player, name, value, players)
+  local mark = player:getMark("@[private]" .. name)
+  if type(mark) ~= "table" then mark = {} end
+  if mark.players == nil then
+    mark.players = players
+  end
+  mark.value = value
+  player.room:setPlayerMark(player, "@[private]" .. name, mark)
+end
+
+--让一名角色的仅对自己可见的mark对所有角色都可见
+---@param player ServerPlayer @ 要公开标记的角色
+---@param name? string @ 要公开的标记名（不含前缀）
+Utility.showPrivateMark = function(player, name)
+  local room = player.room
+  local mark = player:getMark("@[private]" .. name)
+  if type(mark) == "table" then
+    mark.players = table.map(room.players, Util.IdMapper)
+    room:setPlayerMark(player, "@[private]" .. name, mark)
+  end
+end
 
 --- 判断一张牌能否移动至某角色的装备区
 ---@param target Player @ 接受牌的角色
@@ -1576,20 +1610,6 @@ Utility.getAllCardNames = function(guhuo_type, true_name)
     end
   end
   return all_names
-end
-
---让一名角色的仅对自己可见的mark对所有角色都可见
----@param player ServerPlayer @ 要公开标记的角色
----@param name? string @ 要公开的标记名（不含前缀）
-Utility.showPrivateMark = function(player, name)
-  local room = player.room
-  local mark_name = "@[private]" .. name
-  room:setPlayerMark(player, "QMLMARKSHOWN_" .. mark_name, 1)
-  room:doBroadcastNotify("SetPlayerMark", json.encode{
-    player.id,
-    mark_name,
-    player:getMark(mark_name)
-  })
 end
 
 --清除一名角色手牌中的某种标记

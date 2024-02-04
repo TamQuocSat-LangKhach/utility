@@ -7,7 +7,7 @@ import Fk.RoomElement
 ColumnLayout {
   id: root
   anchors.fill: parent
-  property var extra_data: ({})
+  property var extra_data: ({ name: "", data: { value: {} } })
   signal finish()
 
   BigGlowText {
@@ -25,18 +25,22 @@ ColumnLayout {
     Layout.alignment: Qt.AlignHCenter
     clip: true
 
-    model: extra_data.data
+    model: extra_data.data.value
 
     delegate: CardItem {
       id: cardItem
       autoBack: false
       Component.onCompleted: {
         let data = {}
-        data.cid = 0;
-        data.name = modelData;
-        data.suit = '';
-        data.number = 0;
-        data.color = '';
+        if (typeof modelData === "string") {
+          data.cid = 0;
+          data.name = modelData;
+          data.suit = '';
+          data.number = 0;
+          data.color = '';
+        } else {
+          data = lcall("GetCardData", modelData);
+        }
         setData(data);
       }
     }
