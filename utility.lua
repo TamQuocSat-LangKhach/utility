@@ -773,7 +773,7 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
   local card, tos
   if dat then
     tos = dat.targets
-    card = Fk:cloneCard(dat.interaction or names[1])
+    card = Fk:cloneCard(dat.interaction or all_names[1])
     card:addSubcards(subcards)
     card.skillName = skillName
   else
@@ -788,8 +788,8 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
         break
       end
     end
-    if not tos then return end
   end
+  if not tos then return end
   local use = {
     from = player.id,
     tos = table.map(tos, function(p) return {p} end),
