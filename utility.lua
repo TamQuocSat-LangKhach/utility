@@ -141,7 +141,7 @@ end
 ---@return table<integer>? @ 返回表，元素为目标角色的id。返回空则为没有合法目标
 Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distances)
   local room = player.room
-  local canUse = card.skill:canUse(player, card, { bypass_times = bypass_times, bypass_distances = bypass_distances }) and not player:prohibitUse(card)
+  local canUse = card.skill:canUse(player, card, { bypass_times = bypass_times or false, bypass_distances = bypass_distances or false }) and not player:prohibitUse(card)
   if not canUse then return end
   local tos = {}
   for _, p in ipairs(room.alive_players) do
@@ -878,6 +878,8 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   local cardIds = {}
   extra_data = extra_data or {}
   extra_data.bypass_times = true
+  extra_data.bypass_times = extra_data.bypass_times or false
+  extra_data.expand_pile = extra_data.expand_pile or ""
   for _, cid in ipairs(cards) do
     local card = Fk:getCardById(cid)
     if Exppattern:Parse(pattern):match(card) then
