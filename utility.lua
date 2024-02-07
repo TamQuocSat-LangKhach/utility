@@ -731,7 +731,7 @@ Fk:loadTranslationTable{
 ---@param bypass_times? boolean @ 是否无次数限制。默认无次数限制
 ---@param bypass_distances? boolean @ 是否无距离限制。默认有距离限制
 ---@param extraUse? boolean @ 是否不计入次数。默认不计入次数
----@param extra_data? table @ 额外信息，因技能而异了
+---@param extra_data? UseExtraData|table @ 额外信息，因技能而异了
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
 ---@return CardUseStruct? @ 返回卡牌使用框架。若取消使用则返回空
 Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName, prompt, cancelable, bypass_times, bypass_distances, extraUse, extra_data, skipUse)
@@ -865,7 +865,7 @@ end
 ---@param pattern? string @ 选卡规则，与可选卡牌取交集
 ---@param skillName? string @ 技能名
 ---@param prompt? string @ 询问提示信息。默认为：请使用一张牌
----@param extra_data? table @ 额外信息，因技能而异了
+---@param extra_data UseExtraData @ 额外信息，因技能而异了
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
 ---@param cancelable? boolean @ 是否可以取消。默认可以取消
 ---@return CardUseStruct? @ 返回卡牌使用框架。取消使用则返回空
