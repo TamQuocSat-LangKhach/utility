@@ -53,6 +53,21 @@ Utility.moveCardsHoldingAreaCheck = function(room, cards, end_id)
   return ret
 end
 
+--因执行牌的效果而对一名角色造成伤害，即通常描述的使用牌对目标角色造成伤害
+---@param room Room
+---@param by_user? bool @ 进一步判定使用者和来源是否一致（默认为true）
+---@return bool
+Utility.damageByCardEffect = function(room, by_user)
+  by_user = by_user or true
+  local d_event = room.logic:getCurrentEvent():findParent(GameEvent.Damage, true)
+  if d_event == nil then return false end
+  local damage = d_event.data[1]
+  if damage.chain or damage.card == nil then return false end
+  local c_event = d_event:findParent(GameEvent.CardEffect, false)
+  if c_event == nil then return false end
+  return damage.card == c_event.data[1].card and
+  (not by_user or d_event.data[1].from.id == c_event.data[1].from)
+end
 
 
 
