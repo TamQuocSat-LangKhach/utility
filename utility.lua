@@ -1929,6 +1929,57 @@ Utility.jointPindian = function(player, tos, skillName, initialCard)
   return pindianData
 end
 
+
+
+--- 询问一名玩家从几张牌中选择。可以支持expand_cards
+---
+--- 与askForDiscard类似，但是不对选择的牌进行操作就是了。
+---@param player ServerPlayer @ 要询问的玩家
+---@param cards integer[] @ 可选的牌
+---@param minNum integer @ 最小值
+---@param maxNum integer @ 最大值
+---@param skillName? string @ 技能名
+---@param cancelable? boolean @ 能否点取消
+---@param prompt? string @ 提示信息
+---@param expand_pile? string|integer[] @ 可选私人牌堆名称，或不在角色区域内的牌id表
+---@return integer[] @ 选择的牌的id列表
+Utility.askForCard = function(player, cards, minNum, maxNum, skillName, cancelable, prompt, expand_pile)
+  if minNum < 1 then return {} end
+  cancelable = (cancelable == nil) and true or cancelable
+  if minNum >= #cards and not cancelable then return cards end
+  local chosenCards = {}
+  local data = {
+    num = maxNum,
+    min_num = minNum,
+    include_equip = true,
+    skillName = skillName or "choose_cards_skill",
+    pattern = ".",
+    optional_cards = cards,
+    expand_pile = expand_pile,
+  }
+  prompt = prompt or ("#AskForCard:::" .. maxNum .. ":" .. minNum)
+  local _, ret = player.room:askForUseActiveSkill(player, "pro_choose_cards_skill", prompt, cancelable, data)
+  if ret then
+    chosenCards = ret.cards
+  else
+    if cancelable then return {} end
+    chosenCards = table.random(cards, minNum)
+  end
+  return chosenCards
+end
+local prochooseCardsSkill = fk.CreateActiveSkill{
+  name = "pro_choose_cards_skill",
+  card_filter = function(self, to_select, selected)
+    return #selected < self.num and table.contains(self.optional_cards or {}, to_select)
+  end,
+  min_card_num = function(self) return self.min_num end,
+  max_card_num = function(self) return self.num end,
+}
+Fk:addSkill(prochooseCardsSkill)
+Fk:loadTranslationTable{
+  ["pro_choose_cards_skill"] = "选牌",
+}
+
 dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'
 
