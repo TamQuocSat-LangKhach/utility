@@ -635,7 +635,7 @@ end
 ---@param minNum? integer @ 最少交出的卡牌数，默认0
 ---@param maxNum? integer @ 最多交出的卡牌数，默认所有牌
 ---@param prompt? string @ 询问提示信息
----@param expand_pile? string @ 可选私人牌堆名称，如要分配你武将牌上的牌请填写
+---@param expand_pile? string|integer[] @ 可选私人牌堆名称，如要分配你武将牌上的牌请填写
 ---@param skipMove? boolean @ 是否跳过移动。默认不跳过
 ---@param single_max? integer|table @ 限制每人能获得的最大牌数。输入整数或(以角色id为键以整数为值)的表
 ---@return table<integer[]> @ 返回一个表，键为取整后字符串化的角色id，值为分配给其的牌
@@ -654,7 +654,7 @@ Utility.askForDistribution = function(player, cards, targets, skillName, minNum,
   for _, pid in ipairs(targets) do
     list[getString(pid)] = {}
   end
-  local data = { expand_pile = expand_pile }
+  local data = { expand_pile = expand_pile , skillName = skillName }
   room:setPlayerMark(player, "distribution_targets", targets)
   local residueMap = {}
   if type(single_max) == "table" then
