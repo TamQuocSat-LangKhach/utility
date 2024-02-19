@@ -873,7 +873,7 @@ Utility.IsUsingHandcard = function(player, data)
 end
 
 
---- 询问玩家使用一张手牌中的实体卡。注意此函数不判断使用次数限制
+--- 询问玩家使用一张手牌中的实体卡。此函数默认无次数限制
 ---@param room Room @ 房间
 ---@param player ServerPlayer @ 要询问的玩家
 ---@param cards? integer[] @ 可以使用的卡牌，默认为所有手牌
@@ -892,8 +892,9 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   if (cancelable == nil) then cancelable = true end
   local cardIds = {}
   extra_data = extra_data or {}
-  extra_data.bypass_times = true
-  extra_data.bypass_times = extra_data.bypass_times or false
+  extra_data.bypass_distances = extra_data.bypass_distances or false
+  if extra_data.bypass_times == nil then extra_data.bypass_times = true end
+  if extra_data.extraUse == nil then extra_data.extraUse = true end
   extra_data.expand_pile = extra_data.expand_pile or ""
   for _, cid in ipairs(cards) do
     local card = Fk:getCardById(cid)
@@ -924,7 +925,7 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
     from = player.id,
     tos = table.map(dat.targets, function(p) return {p} end),
     card = Fk:getCardById(dat.cards[1]),
-    extraUse = true,
+    extraUse = extra_data.extraUse,
   }
   if not skipUse then
     room:useCard(use)
