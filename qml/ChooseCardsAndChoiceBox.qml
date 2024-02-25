@@ -30,6 +30,7 @@ GraphicsBox {
         setData(modelData);
       }
       autoBack: false
+      showDetail: true
       selectable: !disable_cards.includes(cid)
       onSelectedChanged: {
         if (ok_options.length == 0) return;
