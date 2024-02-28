@@ -26,6 +26,7 @@ Fk:addQmlMark{
     return ""
   end,
   how_to_show = function(name, value, p)
+    if type(value) ~= "table" then return " " end
     if string.startsWith(name, "@[private]$") or string.startsWith(name, "@[private]&") then
       return tostring(#value.value)
     elseif (value.players == nil and Self == p) or (value.players and table.contains(value.players, p.id)) then
