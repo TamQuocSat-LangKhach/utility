@@ -1675,10 +1675,9 @@ Utility.Discussion = function(data)
   room:sendLog{
     type = "#ShowDiscussionResult",
     from = from.id,
-    arg = discussionResult
+    arg = discussionResult,
+    toast = true,
   }
-  local ret = from.deputyGeneral and Fk:translate(from.general) .. '/' .. Fk:translate(from.deputyGeneral) or Fk:translate(from.general)
-  room:doBroadcastNotify("ShowToast", ret .. " " .. Fk:translate("#DiscussionResult") .. " " .. Fk:translate(discussionResult))
 
   logic:trigger("fk.DiscussionResultConfirmed", from, discussionData)
 
@@ -1691,7 +1690,6 @@ Fk:loadTranslationTable{
   ["#StartDiscussionReason"] = "%from 由于 %arg 而发起议事",
   ["#askForDiscussion"] = "请展示一张手牌进行议事",
   ["AskForDiscussion"] = "议事",
-  ["#ShowDiscussionResult"] = "%from 的议事结果为 %arg",
   ["noresult"] = "无结果",
   ["#DiscussionResult"] = "的议事结果为",
 }
@@ -1832,12 +1830,9 @@ Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
     type = "#ShowPindianResult",
     from = pindianData.from.id,
     to = table.map(targets, Util.IdMapper),
-    arg = winner == pindianData.from and "pindianwin" or "pindiannotwin"
+    arg = winner == pindianData.from and "pindianwin" or "pindiannotwin",
+    toast = true,
   }
-  if winner then
-    local ret = "<b>" .. (winner.deputyGeneral and Fk:translate(winner.general) .. '/' .. Fk:translate(winner.deputyGeneral) or Fk:translate(winner.general)) .. "</b>"
-    room:doBroadcastNotify("ShowToast", ret .. " " .. Fk:translate("#WinsInJointPindian"))
-  end
   for toId, result in pairs(pindianData.results) do
     local to = room:getPlayerById(toId)
     result.winner = winner
@@ -1881,10 +1876,6 @@ end, function (self)
   end
   if not self.interrupted then return end
 end)
-
-Fk:loadTranslationTable{
-  ["#WinsInJointPindian"] = "在共同拼点中 <b>赢</b>",
-}
 
 --- 进行共同拼点。
 ---@param player ServerPlayer
