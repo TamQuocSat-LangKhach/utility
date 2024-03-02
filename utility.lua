@@ -58,7 +58,7 @@ end
 ---@param by_user? bool @ 进一步判定使用者和来源是否一致（默认为true）
 ---@return bool
 Utility.damageByCardEffect = function(room, by_user)
-  by_user = by_user or true
+  by_user = (by_user == nil) and true or by_user
   local d_event = room.logic:getCurrentEvent():findParent(GameEvent.Damage, true)
   if d_event == nil then return false end
   local damage = d_event.data[1]
@@ -156,7 +156,7 @@ end
 ---@return table<integer>? @ 返回表，元素为目标角色的id。返回空则为没有合法目标
 Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distances)
   local room = player.room
-  local canUse = card.skill:canUse(player, card, { bypass_times = bypass_times or false, bypass_distances = bypass_distances or false }) and not player:prohibitUse(card)
+  local canUse = card.skill:canUse(player, card, { bypass_times = bypass_times, bypass_distances = bypass_distances }) and not player:prohibitUse(card)
   if not canUse then return end
   local tos = {}
   for _, p in ipairs(room.alive_players) do
