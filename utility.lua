@@ -72,7 +72,7 @@ end
 
 
 -- 使用牌的合法性检测
----@param room Room
+---@param room Room @ 房间
 ---@param player ServerPlayer @ 使用来源
 ---@param card Card @ 被使用的卡牌
 ---@param times_limited? boolean @ 是否有次数限制
@@ -1585,34 +1585,7 @@ end
 ---@param delay? boolean
 ---@param skillName string
 Utility.gainAnExtraTurn = function(player, delay, skillName)
-  local room = player.room
-  delay = (delay == nil) and true or delay
-  if delay then
-    local logic = room.logic
-    local turn = logic:getCurrentEvent():findParent(GameEvent.Turn, true)
-    if turn then
-      turn:prependExitFunc(function() Utility.gainAnExtraTurn(player, false, skillName) end)
-      return
-    end
-  end
-
-  room:sendLog{
-    type = "#GainAnExtraTurn",
-    from = player.id
-  }
-
-  local current = room.current
-  room.current = player
-
-  player.tag["_extra_turn_count"] = player.tag["_extra_turn_count"] or {}
-  local ex_tag = player.tag["_extra_turn_count"]
-  table.insert(ex_tag, skillName)
-
-  GameEvent(GameEvent.Turn, player):exec()
-
-  table.remove(ex_tag)
-
-  room.current = current
+  player:gainAnExtraTurn(delay, skillName)
 end
 
 Utility.Discussion = function(data)

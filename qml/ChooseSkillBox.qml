@@ -2,6 +2,7 @@
 
 import QtQuick
 import QtQuick.Layouts
+import Fk
 import Fk.Pages
 import Fk.RoomElement
 import Fk.Common
@@ -16,21 +17,9 @@ GraphicsBox {
   property string prompt
   property var generals
 
-  title.text: Backend.translate(prompt !== "" ? processPrompt(prompt) : "$Choice")
-  width: 40 + Math.min(5, active_skills.count) * (88 + (generals ? 36 : 0))
+  title.text: prompt === "" ? luatr("$Choice") : Util.processPrompt(prompt)
+  width: Math.max(40 + Math.min(5, active_skills.count) * (88 + (generals ? 36 : 0)), 248)
   height: 230
-
-  function processPrompt(prompt) {
-    const data = prompt.split(":");
-    let raw = Backend.translate(data[0]);
-    const src = parseInt(data[1]);
-    const dest = parseInt(data[2]);
-    if (raw.match("%src")) raw = raw.replace(/%src/g, Backend.translate(getPhoto(src).general));
-    if (raw.match("%dest")) raw = raw.replace(/%dest/g, Backend.translate(getPhoto(dest).general));
-    if (raw.match("%arg2")) raw = raw.replace(/%arg2/g, Backend.translate(data[4]));
-    if (raw.match("%arg")) raw = raw.replace(/%arg/g, Backend.translate(data[3]));
-    return raw;
-  }
 
   ColumnLayout {
     anchors.fill: parent
@@ -109,7 +98,7 @@ GraphicsBox {
               _skills.push(active_skills.get(i).name);
             }
           }
-          roomScene.startCheat("../../packages/utility/qml/SkillDetail", { skills: _skills});
+          roomScene.startCheat("../../packages/utility/qml/SkillDetail", { skills: _skills });
         }
       }
     }

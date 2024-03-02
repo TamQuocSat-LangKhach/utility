@@ -3,6 +3,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import Fk
 import Fk.Pages
 import Fk.RoomElement
 
@@ -18,7 +19,7 @@ GraphicsBox {
   property int max
   property var cancel_options: []
 
-  title.text: Backend.translate(prompt !== "" ? processPrompt(prompt) : "$ChooseCard")
+  title.text: prompt !== "" ? Util.processPrompt(prompt) : luatr("$ChooseCard")
   // TODO: Adjust the UI design in case there are more than 7 cards
   width: 40 + Math.min(8.5, Math.max(4, cards.length)) * 100
   height: 260
@@ -49,18 +50,6 @@ GraphicsBox {
         root.updateCardSelectable();
       }
     }
-  }
-
-  function processPrompt(prompt) {
-    const data = prompt.split(":");
-    let raw = Backend.translate(data[0]);
-    const src = parseInt(data[1]);
-    const dest = parseInt(data[2]);
-    if (raw.match("%src")) raw = raw.replace(/%src/g, Backend.translate(getPhoto(src).general));
-    if (raw.match("%dest")) raw = raw.replace(/%dest/g, Backend.translate(getPhoto(dest).general));
-    if (raw.match("%arg2")) raw = raw.replace(/%arg2/g, Backend.translate(data[4]));
-    if (raw.match("%arg")) raw = raw.replace(/%arg/g, Backend.translate(data[3]));
-    return raw;
   }
 
   Rectangle {
@@ -122,7 +111,7 @@ GraphicsBox {
 
         MetroButton {
           Layout.fillWidth: true
-          text: processPrompt(modelData)
+          text: Util.processPrompt(modelData)
           enabled: root.selected_ids.length >= root.min && root.selected_ids.length <= root.max
 
           onClicked: {
@@ -144,7 +133,7 @@ GraphicsBox {
 
         MetroButton {
           Layout.fillWidth: true
-          text: processPrompt(modelData)
+          text: Util.processPrompt(modelData)
           enabled: true
 
           onClicked: {
