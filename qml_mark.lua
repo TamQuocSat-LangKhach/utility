@@ -10,6 +10,26 @@ Fk:addQmlMark{
     end), " ")
   end,
 }
+-- 在脸上显示类别
+-- 传入值：card type数组（不是card string）
+Fk:addQmlMark{
+  name = "cardtypes",
+  qml_path = "",
+  how_to_show = function(_, value)
+    if type(value) ~= "table" then return " " end
+    local types = {}
+    if table.contains(value, 1) then
+      table.insert(types, Fk:translate("basic_char"))
+    end
+    if table.contains(value, 2) then
+      table.insert(types, Fk:translate("trick_char"))
+    end
+    if table.contains(value, 3) then
+      table.insert(types, Fk:translate("equip_char"))
+    end
+    return table.concat(types, " ")
+  end,
+}
 
 --仅自己可见的mark
 --额外的，后继带$前缀为武将牌堆，后继带&前缀为卡牌牌堆，此时公开逻辑变为是否能点击展示这些卡牌
