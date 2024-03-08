@@ -951,7 +951,7 @@ Fk:loadTranslationTable{
 
 --- 询问玩家使用一张牌（支持使用视为技）
 ---
---- 额外的，你不能使用自己的装备牌
+--- 额外的，你不能使用自己装备区的实体牌
 ---@param room Room @ 房间
 ---@param player ServerPlayer @ 要询问的玩家
 ---@param cards? integer[] @ 可以使用的卡牌，默认包括手牌和“如手牌”
