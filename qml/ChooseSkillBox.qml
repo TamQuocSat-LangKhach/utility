@@ -19,7 +19,7 @@ GraphicsBox {
 
   title.text: prompt === "" ? luatr("$Choice") : Util.processPrompt(prompt)
   width: Math.max(40 + Math.min(5, active_skills.count) * (88 + (generals ? 36 : 0)), 248)
-  height: 230
+  height: Math.max(60 + Math.min(32, active_skills.count) * 11, 230)
 
   ColumnLayout {
     anchors.fill: parent
