@@ -1134,6 +1134,7 @@ local CardDestructSkill = fk.CreateTriggerSkill{
           mirror_move.to = nil
           mirror_move.toArea = Card.Void
           mirror_move.moveInfo = mirror_info
+          mirror_move.moveVisible = true
           table.insert(mirror_moves, mirror_move)
         end
       end
@@ -1391,7 +1392,7 @@ Fk:addSkill(exChooseSkill)
 
 --- 询问玩家选择X张牌和Y名角色。
 ---
---- 返回两个值，第一个是选择的目标列表，第二个是选择的那张牌的id
+--- 返回两个值，第一个是选择目标的id列表，第二个是选择牌的id列表
 ---@param self Room
 ---@param player ServerPlayer @ 要询问的玩家
 ---@param minCardNum integer @ 选卡牌最小值
