@@ -906,10 +906,8 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   end
   extra_data.optional_cards = cardIds
   extra_data.skillName = skillName
-  local dat
-  if #cardIds > 0 then
-    _, dat = room:askForUseViewAsSkill(player, "realcard_viewas", prompt, cancelable, extra_data)
-  end
+  if #cardIds == 0 and not cancelable then return end
+  local _, dat = room:askForUseViewAsSkill(player, "realcard_viewas", prompt, cancelable, extra_data)
   if (not cancelable) and (not dat) then
     for _, cid in ipairs(cardIds) do
       local card = Fk:getCardById(cid)
