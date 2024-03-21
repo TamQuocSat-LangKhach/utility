@@ -563,6 +563,7 @@ end
 Fk:loadTranslationTable{
   ["utility_viewcards"] = "观看卡牌",
   ["$ViewCards"] = "请观看卡牌",
+  ["$ViewCardsFrom"] = "请观看 %src 的卡牌",
 }
 
 
