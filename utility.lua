@@ -675,8 +675,8 @@ Utility.askForDistribution = function(player, cards, targets, skillName, minNum,
   while maxNum > 0 and #_cards > 0 do
     room:setPlayerMark(player, "distribution_cards", _cards)
     room:setPlayerMark(player, "distribution_maxnum", maxNum)
-    prompt = prompt or ("#distribution_skill:::"..minNum..":"..maxNum)
-    local success, dat = room:askForUseActiveSkill(player, "distribution_skill", prompt, minNum == 0, data, true)
+    local _prompt = prompt or ("#distribution_skill:::"..minNum..":"..maxNum)
+    local success, dat = room:askForUseActiveSkill(player, "distribution_skill", _prompt, minNum == 0, data, true)
     if success and dat then
       local to = dat.targets[1]
       local give_cards = dat.cards
