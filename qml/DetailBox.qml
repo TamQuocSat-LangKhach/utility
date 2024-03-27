@@ -12,7 +12,7 @@ ColumnLayout {
     Layout.fillWidth: true
     Layout.preferredHeight: childrenRect.height + 4
 
-    text: Backend.translate(extra_data.name)
+    text: luatr(extra_data.name)
   }
 
   ListView {
@@ -31,7 +31,7 @@ ColumnLayout {
       width: body.width
       font.pixelSize: 18
       color: "#E4D5A0"
-      text: '<b>' + Backend.translate(modelData) + "</b>: " + Backend.translate(":" + modelData)
+      text: '<b>' + luatr(modelData) + "</b>: " + luatr(":" + modelData)
 
       readOnly: true
       selectByKeyboard: true

@@ -39,7 +39,7 @@ Flickable {
     skillDesc.text = "";
 
     extra_data.skills.forEach((t) => {
-      skillDesc.append("<b>" + Backend.translate(t) + "</b>: " + Backend.translate(":" + t));
+      skillDesc.append("<b>" + luatr(t) + "</b>: " + luatr(":" + t));
       skillDesc.append("\n");
     });
   }

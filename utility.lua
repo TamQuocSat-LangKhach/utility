@@ -1702,7 +1702,7 @@ Utility.JointPindianEvent = "GameEvent.JointPindian"
 
 Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
   local pindianData = table.unpack(self.data) ---@class PindianStruct
-  local room = self.room
+  local room = self.room ---@class Room
   local logic = room.logic
   logic:trigger(fk.StartPindian, pindianData.from, pindianData)
 
@@ -1738,7 +1738,7 @@ Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
 
     table.insert(moveInfos, {
       ids = { _pindianCard.id },
-      from = pindianData.from.id,
+      from = room:getCardOwner(_pindianCard.id).id,
       fromArea = room:getCardArea(_pindianCard.id),
       toArea = Card.Processing,
       moveReason = fk.ReasonPut,
@@ -1756,7 +1756,7 @@ Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
 
       table.insert(moveInfos, {
         ids = { _pindianCard.id },
-        from = to.id,
+        from = room:getCardOwner(_pindianCard.id).id,
         fromArea = room:getCardArea(_pindianCard.id),
         toArea = Card.Processing,
         moveReason = fk.ReasonPut,

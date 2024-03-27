@@ -14,7 +14,7 @@ ColumnLayout {
     Layout.fillWidth: true
     Layout.preferredHeight: childrenRect.height + 4
 
-    text: Backend.translate(extra_data.name)
+    text: luatr(extra_data.name)
   }
 
   GridView {
@@ -31,6 +31,9 @@ ColumnLayout {
       id: cardItem
       autoBack: false
       name: modelData
+      onClicked: {
+        roomScene.startCheat("GeneralDetail", { generals: [modelData] });
+      }
     }
   }
 }

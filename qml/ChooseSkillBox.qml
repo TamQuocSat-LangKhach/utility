@@ -47,7 +47,7 @@ GraphicsBox {
           }
 
           SkillButton {
-            skill: Backend.translate(name)
+            skill: luatr(name)
             type: "active"
             enabled: true
             orig: name
@@ -73,7 +73,7 @@ GraphicsBox {
       MetroButton {
         Layout.alignment: Qt.AlignHCenter
         id: buttonConfirm
-        text: Backend.translate("OK")
+        text: luatr("OK")
         width: 120
         height: 35
 
@@ -88,7 +88,7 @@ GraphicsBox {
         id: detailBtn
         width: 80
         height: 35
-        text: Backend.translate("Show General Detail")
+        text: luatr("Show General Detail")
         onClicked: {
           let _skills = [];
           if (root.selected.length > 0) {
