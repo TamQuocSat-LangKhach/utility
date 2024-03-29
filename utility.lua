@@ -452,7 +452,7 @@ Fk:loadTranslationTable{
   ["#convertEquip"] = "选择一张装备牌被替换",
 }
 
---- 询问玩家交换两堆卡牌中的任意张。
+--- 询问玩家交换两堆卡牌中的任意张（操作逻辑为点选等量需要交换的卡牌）。
 ---@param player ServerPlayer @ 要询问的玩家
 ---@param name1 string @ 第一行卡牌名称
 ---@param name2 string @ 第一行卡牌名称
@@ -490,14 +490,33 @@ Fk:addPoxiMethod{
       return table.contains(cards, id)
     end) *2 == #selected
   end,
-  prompt = function ()
-    return "选择要交换的卡牌"
+  prompt = function (data, extra_data)
+    return extra_data and extra_data[1] or "#AskForQMLExchange"
   end
 }
 
 Fk:loadTranslationTable{
   ["qml_exchange"] = "换牌",
+  ["#AskForQMLExchange"] = "选择要交换的卡牌",
 }
+
+--- 询问玩家交换两堆卡牌中的任意张（操作逻辑为拖拽交换，暂不完善，优化中……）
+---
+--- 注意：目前第一行固定不能移动，且不能超过8张卡牌
+---@param player ServerPlayer @ 要询问的玩家
+---@param skillname string @ 烧条技能名
+---@param cardMap any @ {"牌堆1名称"，"牌堆1卡表", "牌堆2名称"，"牌堆2卡表"}
+---@param prompt? string @ 操作提示
+---@param can_exchange? boolean @ 是否允许自由排列第一行卡的位置（暂时无效）
+---@return table[]
+Utility.askForArrangeCards = function(player, skillname, cardMap, prompt, can_exchange)
+  local result = player.room:askForCustomDialog(player, skillname,
+  "packages/utility/qml/ArrangeCardsBox.qml", {
+    cardMap[1], cardMap[2],
+    cardMap[3], cardMap[4], prompt, can_exchange
+  })
+  return result == nil and {cardMap[2], cardMap[4]} or json.decode(result)
+end
 
 --- 询问玩家选择牌和选项
 ---@param player ServerPlayer @ 要询问的玩家
