@@ -355,6 +355,69 @@ Utility.swapHandCards = function(room, player, targetOne, targetTwo, skillName)
   table.clone(targetTwo.player_cards[Player.Hand]), skillName)
 end
 
+-- 将一名角色的卡牌与牌堆中的卡牌交换（注意：牌堆的卡需预先取出，若为牌堆底需倒序）
+---@param player ServerPlayer @ 移动的目标
+---@param cards1 integer[] @ 将要放到牌堆的牌
+---@param cards2 integer[] @ 将要收为手牌的牌
+---@param skillName string @ 技能名
+---@param pile_name string @ 交换的私有牌堆名，特别的，为"Top"则为牌堆顶，"Bottom"则为牌堆底
+---@param visible? boolean @ 是否明牌移动
+---@param proposer? integer @ 移动的操作者（默认同player）
+Utility.swapCardsWithPile = function(player, cards1, cards2, skillName, pile_name, visible, proposer)
+  proposer = proposer or player.id
+  local room = player.room
+  local handcards = player:getCardIds{Player.Hand, Player.Equip}
+
+  if pile_name == "Top" or pile_name == "Bottom" then
+    local moveInfos = {}
+    local drawPilePosition = (pile_name == "Top") and 0 or #room.draw_pile
+    local j = 1
+    for i = 1, #cards1, 1 do
+      local id = cards1[i]
+      if table.contains(handcards, id) then
+        table.insert(moveInfos, {
+          ids = {id},
+          from = player.id,
+          toArea = Card.DrawPile,
+          moveReason = fk.ReasonJustMove,
+          skillName = skillName,
+          drawPilePosition = drawPilePosition + i,
+        })
+      else
+        if pile_name == "Top" then
+          table.insert(room.draw_pile, j, id)
+          j = j + 1
+        else
+          table.insert(room.draw_pile, id)
+        end
+      end
+    end
+    if #moveInfos > 0 then
+      room:moveCards(table.unpack(moveInfos))
+    end
+    cards2 = table.filter(cards2, function (id)
+      return not table.contains(handcards, id)
+    end)
+  else
+    cards1 = table.filter(cards1, function (id)
+      return table.contains(handcards, id)
+    end)
+    if #cards1 > 0 then
+      player:addToPile(pile_name, cards1, visible, skillName)
+    end
+    cards2 = table.filter(player:getPile(pile_name), function (id)
+      return table.contains(cards2, id)
+    end)
+  end
+
+  if #cards2 == 0 then return false end
+  if player.dead then
+    room:moveCardTo(cards2, Card.DiscardPile, nil, fk.ReasonJustMove, skillName, nil, true)
+  else
+    room:moveCardTo(cards2, Card.PlayerHand, player, fk.ReasonPrey, skillName, nil, visible, proposer)
+  end
+end
+
 -- 获取角色对应Mark并初始化为table
 ---@param player Player @ 要被获取标记的那个玩家
 ---@param mark string @ 标记
