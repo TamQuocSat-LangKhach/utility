@@ -515,7 +515,7 @@ Utility.askForArrangeCards = function(player, skillname, cardMap, prompt, can_ex
     cardMap[1], cardMap[2],
     cardMap[3], cardMap[4], prompt, can_exchange
   })
-  return result == nil and {cardMap[2], cardMap[4]} or json.decode(result)
+  return result == "" and {cardMap[2], cardMap[4]} or json.decode(result)
 end
 
 --- 询问玩家选择牌和选项
