@@ -1778,7 +1778,6 @@ Fk:loadTranslationTable{
   ["#askForDiscussion"] = "请展示一张手牌进行议事",
   ["AskForDiscussion"] = "议事",
   ["noresult"] = "无结果",
-  ["#DiscussionResult"] = "的议事结果为",
 }
 
 Utility.JointPindianEvent = "GameEvent.JointPindian"
@@ -1920,6 +1919,14 @@ Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
     arg = winner == pindianData.from and "pindianwin" or "pindiannotwin",
     toast = true,
   }
+  if winner and winner ~= pindianData.from then
+    room:sendLog{
+      type = "#ShowJointPindianWinner",
+      from = winner.id,
+      arg = "pindianwin",
+      toast = true,
+    }
+  end
   for toId, result in pairs(pindianData.results) do
     local to = room:getPlayerById(toId)
     result.winner = winner
@@ -1963,7 +1970,9 @@ end, function (self)
   end
   if not self.interrupted then return end
 end)
-
+Fk:loadTranslationTable{
+  ["#ShowJointPindianWinner"] = "%from %arg",
+}
 --- 进行共同拼点。
 ---@param player ServerPlayer
 ---@param tos ServerPlayer[]
