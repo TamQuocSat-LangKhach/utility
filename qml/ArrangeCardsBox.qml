@@ -127,11 +127,12 @@ GraphicsBox {
         pos = mapFromItem(pile, box.x, box.y);
         card = result[j][i];
         card.draggable = (j > 0)
+		card.glow.visible = false;
         card.origX = pos.x + i * spacing;
         card.origY = pos.y;
         card.z = i + 1;
         card.initialZ = i + 1;
-        card.maxZ = result[j].length;
+        card.maxZ = cardItem.count;
         card.goBack(true);
       }
     }
