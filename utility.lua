@@ -1642,13 +1642,28 @@ end
 ---@return string[] @ 返回牌名列表
 Utility.getAllCardNames = function(guhuo_type, true_name)
   local all_names = {}
-  for name, card in pairs(Fk.all_card_types) do
+  local basics = {}
+  local normalTricks = {}
+  local delayedTricks = {}
+  for _, card in ipairs(Fk.cards) do
     if not table.contains(Fk:currentRoom().disabled_packs, card.package.name) and not card.is_derived then
-      if (card.type == Card.TypeBasic and string.find(guhuo_type, "b")) or
-      (card.type == Card.TypeTrick and string.find(guhuo_type, card.sub_type == Card.SubtypeDelayedTrick and "d" or "t")) then
-        table.insertIfNeed(all_names, true_name and card.trueName or card.name)
+      if card.type == Card.TypeBasic then
+        table.insertIfNeed(basics, true_name and card.trueName or card.name)
+      elseif card.type == Card.TypeTrick and card.sub_type ~= Card.SubtypeDelayedTrick then
+        table.insertIfNeed(normalTricks, true_name and card.trueName or card.name)
+      elseif card.type == Card.TypeTrick and card.sub_type == Card.SubtypeDelayedTrick then
+        table.insertIfNeed(delayedTricks, true_name and card.trueName or card.name)
       end
     end
+  end
+  if guhuo_type:find("b") then
+    table.insertTable(all_names, basics)
+  end
+  if guhuo_type:find("t") then
+    table.insertTable(all_names, normalTricks)
+  end
+  if guhuo_type:find("d") then
+    table.insertTable(all_names, delayedTricks)
   end
   return all_names
 end
