@@ -1730,6 +1730,32 @@ Utility.gainAnExtraTurn = function(player, delay, skillName)
   player:gainAnExtraTurn(delay, skillName)
 end
 
+--- 比较距离
+---@param from Player @ 起点角色
+---@param to Player @ 终点角色
+---@param num integer @ 比较基准
+---@param operator string @ 运算符，有 ``"<"`` ``">"`` ``"<="`` ``">="`` ``"=="`` ``"~="``
+---@return boolean @ 返回比较结果，不计入距离结果永远为false
+Utility.compareDistance = function(from, to, num, operator)
+  local distance = from:distanceTo(to)
+  if distance < 0 or num < 0 then return false end
+  if operator == ">" then
+    return distance > num
+  elseif operator == "<" then
+    return distance < num
+  elseif operator == "==" then
+    return distance == num
+  elseif operator == ">=" then
+    return distance >= num
+  elseif operator == "<=" then
+    return distance <= num
+  elseif operator == "~=" then
+    return distance ~= num
+  end
+  return false
+end
+
+--- 议事
 Utility.Discussion = function(data)
   --local discussionData = table.unpack(self.data)
   local discussionData = data
