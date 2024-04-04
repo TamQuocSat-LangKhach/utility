@@ -418,6 +418,46 @@ Utility.swapCardsWithPile = function(player, cards1, cards2, skillName, pile_nam
   end
 end
 
+---@param player ServerPlayer @ 要换将的玩家
+---@param new_general string @ 要变更的武将，若不存在则变身为孙策，孙策不存在变身为士兵
+---@param maxHpChange? boolean @ 是否改变体力上限，默认改变
+Utility.changeHero = function(player, new_general, maxHpChange)
+  local room = player.room
+  maxHpChange = (maxHpChange == nil) and true or maxHpChange
+
+  local skills = {}
+  for _, s in ipairs(player.player_skills) do
+    if not (s.attached_equip or s.name[#s.name] == "&") then
+      table.insertIfNeed(skills, s.name)
+    end
+  end
+  if room.settings.gameMode == "m_1v2_mode" and player.role == "lord" then
+    table.removeOne(skills, "m_feiyang")
+    table.removeOne(skills, "m_bahu")
+  end
+  if #skills > 0 then
+    room:handleAddLoseSkills(player, "-"..table.concat(skills, "|-"), nil, true, false)
+  end
+  local generals = {player.general}
+  if player.deputyGeneral ~= "" then
+    table.insert(generals, player.deputyGeneral)
+  end
+  room:returnToGeneralPile(generals)
+  room:findGeneral(new_general)
+  room:changeHero(player, new_general, false, false, true, false)
+  room:changeHero(player, "", false, true, true, false)
+
+  if player.dead or not maxHpChange then return false end
+  local x = player:getGeneralMaxHp()
+  if player.role == "lord" and player.role_shown and (#room.players > 4 or room.settings.gameMode == "m_1v2_mode") then
+    x = x + 1
+  end
+  if player.maxHp ~= x then
+    room:changeMaxHp(player, x - player.maxHp)
+  end
+end
+
+
 -- 获取角色对应Mark并初始化为table
 ---@param player Player @ 要被获取标记的那个玩家
 ---@param mark string @ 标记
