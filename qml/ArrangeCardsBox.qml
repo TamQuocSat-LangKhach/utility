@@ -259,7 +259,7 @@ GraphicsBox {
       }
       a = result[j].length;
       if (movepos.length == 2) {
-        if (movepos[0] == j && !result[j].includes(dragging_card)) {
+        if (movepos[0] == j && !result[j].includes(dragging_card) && result[j].length < areaCapacities[j]) {
           a++;
         } else if (movepos[0] != j && result[j].includes(dragging_card)) {
           a--;
