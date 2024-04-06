@@ -2156,4 +2156,7 @@ end
 dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'
 
+-- FIXME: 0.4.11本体擦屁股环节
+Fk:appendKingdomMap("god", { "wei", "shu", "wu", "qun", "jin" })
+
 return Utility
