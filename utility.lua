@@ -2156,4 +2156,7 @@ end
 dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'
 
+-- 添加默认映射
+Fk:appendKingdomMap("god", { "wei", "shu", "wu", "qun" })
+
 return Utility
