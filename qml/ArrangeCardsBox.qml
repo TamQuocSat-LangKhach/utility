@@ -144,10 +144,16 @@ GraphicsBox {
       pos = mapFromItem(pile, box.x, box.y);
       if (Math.abs(pos.y - _card.y) < 130 / 2) break;
     }
-    if (j == 0 && result[j].includes(_card) && !free_arrange) {
+    if (result[j].includes(_card)) {
+      if (j == 0 && !free_arrange) {
+        arrangeCards();
+        return;
+      }
+    } else if (!_card.selectable) {
       arrangeCards();
       return;
     }
+
     let card;
     let index = result[j].indexOf(_card);
     if (index == -1 && result[j].length == areaCapacities[j]) {
@@ -304,7 +310,7 @@ GraphicsBox {
               card.selectable = (org_cards[0].includes(dragging_card.cid) || !result[0].includes(dragging_card) || card.cid == org_cards[0][result[0].indexOf(dragging_card)])
           }
         }
-        card.draggable = dragging_card != "" || free_arrange || (j == 1) || card.selectable;
+        card.draggable = (dragging_card == "") && (free_arrange || (j == 1) || card.selectable);
         card.goBack(true);
         b++;
       }
