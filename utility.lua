@@ -280,7 +280,7 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
     table.insert(moveInfos, {
       from = targetOne.id,
       ids = cards1,
-      toArea = Card.Processing,
+      toArea = Card.Void,
       moveReason = fk.ReasonExchange,
       proposer = player.id,
       skillName = skillName,
@@ -290,7 +290,7 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
     table.insert(moveInfos, {
       from = targetTwo.id,
       ids = cards2,
-      toArea = Card.Processing,
+      toArea = Card.Void,
       moveReason = fk.ReasonExchange,
       proposer = player.id,
       skillName = skillName,
@@ -302,12 +302,12 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
   moveInfos = {}
   if not targetTwo.dead then
     local to_ex_cards = table.filter(cards1, function (id)
-      return room:getCardArea(id) == Card.Processing
+      return room:getCardArea(id) == Card.Void
     end)
     if #to_ex_cards > 0 then
       table.insert(moveInfos, {
         ids = to_ex_cards,
-        fromArea = Card.Processing,
+        fromArea = Card.Void,
         to = targetTwo.id,
         toArea = Card.PlayerHand,
         moveReason = fk.ReasonExchange,
@@ -318,12 +318,12 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
   end
   if not targetOne.dead then
     local to_ex_cards = table.filter(cards2, function (id)
-      return room:getCardArea(id) == Card.Processing
+      return room:getCardArea(id) == Card.Void
     end)
     if #to_ex_cards > 0 then
       table.insert(moveInfos, {
         ids = to_ex_cards,
-        fromArea = Card.Processing,
+        fromArea = Card.Void,
         to = targetOne.id,
         toArea = Card.PlayerHand,
         moveReason = fk.ReasonExchange,
@@ -337,7 +337,7 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
   end
   table.insertTable(cards1, cards2)
   local dis_cards = table.filter(cards1, function (id)
-    return room:getCardArea(id) == Card.Processing
+    return room:getCardArea(id) == Card.Void
   end)
   if #dis_cards > 0 then
     room:moveCardTo(dis_cards, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile, skillName, nil, true, player.id)
