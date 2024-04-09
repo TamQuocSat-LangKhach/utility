@@ -622,7 +622,6 @@ Utility.askForArrangeCards = function(player, skillname, cardMap, prompt, free_a
   if type(cardMap[1]) == "number" then
     cardMap = {cardMap}
   else
-    local cardMap_copy = table.simpleClone(cardMap)
     for i = #cardMap, 1, -1 do
       if type(cardMap[i]) == "string" then
         table.insert(areaNames, 1, cardMap[i])
@@ -636,7 +635,9 @@ Utility.askForArrangeCards = function(player, skillname, cardMap, prompt, free_a
   box_size = box_size or 7
   max_limit = max_limit or {#cardMap[1], #cardMap > 1 and #cardMap[2] or #cardMap[1]}
   min_limit = min_limit or {0, 0}
-
+  for _ = #cardMap + 1, #min_limit, 1 do
+    table.insert(cardMap, {})
+  end
   --TODO:无default_choice时带取消键
   local result = player.room:askForCustomDialog(player, skillname,
   "packages/utility/qml/ArrangeCardsBox.qml", {
@@ -644,18 +645,31 @@ Utility.askForArrangeCards = function(player, skillname, cardMap, prompt, free_a
   })
   if result == "" then
     if default_choice then return default_choice end
-    local cards = {table.connect(table.unpack(cardMap))}
-    if #min_limit > 1 then
-      for i = 2, #min_limit, 1 do
-        table.insert(cards, {})
-        if #cards[i] < min_limit[i] then
-          for _ = 1, min_limit[i] - #cards[i], 1 do
-            table.insert(cards[i], table.remove(cards[1], #cards[1] + #cards[i] - min_limit[i] + 1))
+    for j = 1, #min_limit, 1 do
+      if #cardMap[j] < min_limit[j] then
+        local cards = {table.connect(table.unpack(cardMap))}
+        if #min_limit > 1 then
+          for i = 2, #min_limit, 1 do
+            table.insert(cards, {})
+            if #cards[i] < min_limit[i] then
+              for _ = 1, min_limit[i] - #cards[i], 1 do
+                table.insert(cards[i], table.remove(cards[1], #cards[1] + #cards[i] - min_limit[i] + 1))
+              end
+            end
+          end
+          if #cards[1] > max_limit[1] then
+            for i = 2, #max_limit, 1 do
+              while #cards[i] < max_limit[i] do
+                table.insert(cards[i], table.remove(cards[1], max_limit[1] + 1))
+                if #cards[1] == max_limit[1] then return cards end
+              end
+            end
           end
         end
+        return cards
       end
     end
-    return cards
+    return cardMap
   end
   return json.decode(result)
 end
