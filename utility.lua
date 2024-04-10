@@ -1771,11 +1771,14 @@ end
 ---@param skill_name string @ 泛转化技的技能名
 ---@param card_names string[] @ 待判定的牌名列表
 ---@param subcards? string[] @ 子卡（某些技能可以提前确定子卡，如奇策、妙弦）
+---@param ban_cards? string[] @ 被排除的卡名
 ---@return string[] @ 返回牌名列表
-Utility.getViewAsCardNames = function(player, skill_name, card_names, subcards)
+Utility.getViewAsCardNames = function(player, skill_name, card_names, subcards, ban_cards)
+  ban_cards = ban_cards or {}
   if Fk.currentResponsePattern == nil then
     return table.filter(card_names, function (name)
       local card = Fk:cloneCard(name)
+      if table.contains(ban_cards, card.trueName) then return false end
       card.skillName = skill_name
       if subcards then
         card:addSubcards(subcards)
@@ -1785,6 +1788,7 @@ Utility.getViewAsCardNames = function(player, skill_name, card_names, subcards)
   else
     return table.filter(card_names, function (name)
       local card = Fk:cloneCard(name)
+      if table.contains(ban_cards, card.trueName) then return false end
       card.skillName = skill_name
       if subcards then
         card:addSubcards(subcards)
