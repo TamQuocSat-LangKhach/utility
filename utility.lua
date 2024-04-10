@@ -692,15 +692,33 @@ Fk:loadTranslationTable{
 ---@return table<"top"|"bottom", integer[]>
 Utility.askForGuanxing = function (player, cards, top_limit, bottom_limit, customNotify, prompt, noPut, areaNames)
   local cardMap = {cards}
-  table.insertTable(cardMap, areaNames or {"Top", "Bottom"})
-  local ret = Utility.askForArrangeCards(
-    player, customNotify or "AskForGuanxing",
-    cardMap, prompt, true, #cards < 8 and 0 or 7,
-    {top_limit and top_limit[2] or #cards, bottom_limit and bottom_limit[2] or #cards},
-    {top_limit and top_limit[1] or 0, bottom_limit and bottom_limit[1] or 0}
-  )
-  local top, bottom = ret[1], ret[2]
-
+  local top, bottom = {}, {}
+  if top_limit and top_limit[2] == 0 then
+    table.insertTable(cardMap, areaNames or {"Bottom"})
+    bottom = Utility.askForArrangeCards(
+      player, customNotify or "AskForGuanxing",
+      cardMap, prompt, true, #cards < 8 and 0 or 7,
+      {bottom_limit and bottom_limit[2] or #cards},
+      {bottom_limit and bottom_limit[1] or 0}
+    )[1]
+  elseif bottom_limit and bottom_limit[2] == 0 then
+    table.insertTable(cardMap, areaNames or {"Top"})
+    top = Utility.askForArrangeCards(
+      player, customNotify or "AskForGuanxing",
+      cardMap, prompt, true, #cards < 8 and 0 or 7,
+      {top_limit and top_limit[2] or #cards},
+      {top_limit and top_limit[1] or 0}
+    )[1]
+  else
+    table.insertTable(cardMap, areaNames or {"Top", "Bottom"})
+    local ret = Utility.askForArrangeCards(
+      player, customNotify or "AskForGuanxing",
+      cardMap, prompt, true, #cards < 8 and 0 or 7,
+      {top_limit and top_limit[2] or #cards, bottom_limit and bottom_limit[2] or #cards},
+      {top_limit and top_limit[1] or 0, bottom_limit and bottom_limit[1] or 0}
+    )
+    top, bottom = ret[1], ret[2]
+  end
   if not noPut then
     local room = player.room
     for i = #top, 1, -1 do
