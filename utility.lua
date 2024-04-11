@@ -2192,6 +2192,48 @@ Utility.jointPindian = function(player, tos, skillName, initialCard)
   return pindianData
 end
 
+
+--- 竞争询问一名角色弃牌。可以取消。默认跳过弃牌
+---@param room Room
+---@param players table<ServerPlayer> @ 询问弃牌角色
+---@param minNum integer @ 最小值
+---@param maxNum integer @ 最大值
+---@param includeEquip? boolean @ 能不能弃装备区？
+---@param skillName? string @ 引发弃牌的技能名
+---@param pattern? string @ 弃牌需要符合的规则
+---@param prompt? string @ 提示信息
+---@param skipDiscard? boolean @ 是否跳过弃牌。默认跳过
+---@return ServerPlayer?, integer[] @ 响应角色，和弃掉的牌的id列表
+Utility.askForRaceDiscard = function (room, players, minNum, maxNum, includeEquip, skillName, pattern, prompt, skipDiscard)
+  pattern = pattern or "."
+  skipDiscard = skipDiscard or (skipDiscard == nil)
+  skillName = skillName or ""
+  room:notifyMoveFocus(players, skillName)
+  local extra_data = {
+    num = maxNum,
+    min_num = minNum,
+    include_equip = includeEquip,
+    skillName = skillName,
+    pattern = pattern,
+  }
+  prompt = prompt or ("#AskForDiscard:::" .. maxNum .. ":" .. minNum)
+  local data = {"discard_skill", prompt, true, extra_data}
+  local winner = room:doRaceRequest("AskForUseActiveSkill", players, json.encode(data))
+  local toDiscard = {}
+  if winner then
+    local ret = json.decode(winner.client_reply)
+    toDiscard = json.decode(ret.card).subcards
+  end
+  if winner and not skipDiscard then
+    room:throwCard(toDiscard, skillName, winner, winner)
+  end
+  return winner, toDiscard
+end
+
+
+
+
+
 dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'
 
