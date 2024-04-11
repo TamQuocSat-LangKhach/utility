@@ -734,6 +734,8 @@ Utility.askForGuanxing = function (player, cards, top_limit, bottom_limit, custo
       arg = #top,
       arg2 = #bottom,
     }
+
+    room:doBroadcastNotify("UpdateDrawPile", #room.draw_pile)
   end
 
   return { top = top, bottom = bottom }
