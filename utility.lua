@@ -1408,6 +1408,28 @@ Utility.ConvertSuit = function(value, input_type, output_type)
 end
 
 
+-- 阶段互译 int和str类型互换
+---@param phase string|integer|table
+Utility.ConvertPhse = function(phase)
+  if type(phase) == "table" then
+    return table.map(phase, function (p)
+      return Utility.ConvertPhse(p)
+    end)
+  end
+  local phase_table = {
+    [1] = "phase_roundstart",
+    [2] = "phase_start",
+    [3] = "phase_judge",
+    [4] = "phase_draw",
+    [5] = "phase_play",
+    [6] = "phase_discard",
+    [7] = "phase_finish",
+    [8] = "phase_notactive",
+    [9] = "phase_phasenone",
+  }
+  return type(phase) == "string" and table.indexOf(phase_table, phase) or phase_table[phase]
+end
+
 ---增加标记数量的使用杀次数上限，可带后缀
 MarkEnum.SlashResidue = "__slash_residue"
 ---使用杀无次数限制，可带后缀
