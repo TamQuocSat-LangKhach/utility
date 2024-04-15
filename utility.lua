@@ -28,7 +28,7 @@ Utility.getEventsByRule = function(room, eventType, n, func, end_id)
   return ret
 end
 
--- 用来判定一些卡牌在此次移动事件发生之后没有再被移动过。
+-- 用来判定一些卡牌在此次移动事件发生之后没有再被移动过（注意：由于洗牌的存在，若判定处在弃牌堆的卡牌需要手动判区域）
 --
 -- 根据规则集，如果需要在卡牌移动后对参与此事件的卡牌进行操作，是需要过一遍这个检测的(=ﾟωﾟ)ﾉ
 ---@param room Room
@@ -1391,6 +1391,44 @@ Fk:addSkill(CardDestructSkill)
 Fk:loadTranslationTable{
   ["#card_destruct_skill"] = "卡牌销毁",
   ["#destructDerivedCards"] = "%card 被销毁了",
+}
+
+local CardLogSkill = fk.CreateTriggerSkill{
+  name = "#card_log_skill",
+  global = true,
+  mute = true,
+  refresh_events = {fk.AfterCardsMove},
+  can_refresh = function (self, event, target, player, data)
+    return player == player.room.players[1]
+  end,
+  on_refresh = function(self, event, target, player, data)
+    local room = player.room
+    for _, move in ipairs(data) do
+      if move.toArea == Card.Processing and table.contains({ fk.ReasonJustMove, fk.ReasonPut }, move.moveReason) then
+        local ids = table.map(move.moveInfo, function (info)
+          return info.cardId
+        end)
+        if #ids > 0 then
+          room:sendLog{
+            type = "#TurnOverCardFromDrawPile",
+            from = player.id,
+            arg = move.skillName,
+            card = ids,
+          }
+          room:sendFootnote(ids, {
+            type = "##TurnOverCard",
+            arg = move.skillName,
+          })
+        end
+      end
+    end
+  end,
+}
+Fk:addSkill(CardLogSkill)
+Fk:loadTranslationTable{
+  ["#card_log_skill"] = "",
+  ["#TurnOverCardFromDrawPile"] = "%arg 亮出卡牌：%card",
+  ["##TurnOverCard"] = "%arg亮出",
 }
 
 --花色互转（支持int(Card.Heart)，string("heart")，icon("♥")，symbol(translate后的红色"♥")）
