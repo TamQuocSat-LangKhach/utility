@@ -1405,16 +1405,24 @@ local CardLogSkill = fk.CreateTriggerSkill{
     local room = player.room
     for _, move in ipairs(data) do
       if move.toArea == Card.Processing and table.contains({ fk.ReasonJustMove, fk.ReasonPut }, move.moveReason) then
-        local ids = table.map(move.moveInfo, function (info)
-          return info.cardId
-        end)
+        local ids = {}
+        for _, info in ipairs(move.moveInfo) do
+          if info.fromArea == Card.DrawPile then
+            table.insert(ids, info.cardId)
+          end
+        end
         if #ids > 0 then
-          room:sendLog{
-            type = "#TurnOverCardFromDrawPile",
-            from = player.id,
+          local log = {
             arg = move.skillName,
             card = ids,
           }
+          if move.proposer then
+            log.type = "#TurnOverCardFromDrawPileByPlayer"
+            log.from = move.proposer
+          else
+            log.type = "#TurnOverCardFromDrawPile"
+          end
+          room:sendLog(log)
           room:sendFootnote(ids, {
             type = "##TurnOverCard",
             arg = move.skillName,
@@ -1427,7 +1435,8 @@ local CardLogSkill = fk.CreateTriggerSkill{
 Fk:addSkill(CardLogSkill)
 Fk:loadTranslationTable{
   ["#card_log_skill"] = "",
-  ["#TurnOverCardFromDrawPile"] = "%arg 亮出卡牌：%card",
+  ["#TurnOverCardFromDrawPileByPlayer"] = "%from 因 %arg 亮出 %card",
+  ["#TurnOverCardFromDrawPile"] = "%arg 亮出 %card",
   ["##TurnOverCard"] = "%arg亮出",
 }
 
