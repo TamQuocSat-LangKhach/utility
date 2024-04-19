@@ -359,7 +359,7 @@ GraphicsBox {
     const d = data;
 
     cards = d[0].reduce((newArray, elem) => {
-      return newArray.concat(elem.map(cid => JSON.parse(Backend.callLuaFunction("GetCardData", [cid]))));
+      return newArray.concat(elem.map(cid => lcall("GetCardData", cid)));
     }, []);
 
     [org_cards, prompt, size, areaCapacities, areaLimits, free_arrange, areaNames, pattern, poxi_type] = d;

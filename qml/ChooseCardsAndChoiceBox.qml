@@ -168,7 +168,7 @@ GraphicsBox {
   function loadData(data) {
     const d = data;
     cards = d[0].map(cid => {
-      return JSON.parse(Backend.callLuaFunction("GetCardData", [cid]));
+      return lcall("GetCardData", cid);
     });
     ok_options = d[1];
     prompt = d[2] ?? "";
