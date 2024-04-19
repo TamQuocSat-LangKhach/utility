@@ -419,6 +419,27 @@ Utility.swapCardsWithPile = function(player, cards1, cards2, skillName, pile_nam
   end
 end
 
+
+-- 根据模式修改角色的属性
+---@param player ServerPlayer @ 要换将的玩家
+---@param mode string @ 模式名
+---@return table @ 返回表，键为调整的角色属性，值为调整后的属性
+Utility.changePlayerPropertyByMode = function(player, mode)
+  local room = player.room
+  if not Fk.game_modes[mode] then return {} end
+  local func = Fk.game_modes[mode].getAdjustedProperty
+  if type(func) == "function" then
+    return func(player)
+  else
+    local list = {}
+    if player.role == "lord" and player.role_shown and #room.players > 4 then
+      list.hp = player.hp + 1
+      list.maxHp = player.maxHp + 1
+    end
+    return list
+  end
+end
+
 ---@param player ServerPlayer @ 要换将的玩家
 ---@param new_general string @ 要变更的武将，若不存在则变身为孙策，孙策不存在变身为士兵
 ---@param maxHpChange? boolean @ 是否改变体力上限，默认改变
