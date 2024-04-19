@@ -356,7 +356,7 @@ Utility.swapHandCards = function(room, player, targetOne, targetTwo, skillName)
   table.clone(targetTwo.player_cards[Player.Hand]), skillName)
 end
 
--- 将一名角色的卡牌与牌堆中的卡牌交换（注意：牌堆的卡需预先取出，若为牌堆底需倒序）
+-- 将一名角色的卡牌与牌堆中的卡牌交换（注意：牌堆的卡需预先取出）
 ---@param player ServerPlayer @ 移动的目标
 ---@param cards1 integer[] @ 将要放到牌堆的牌
 ---@param cards2 integer[] @ 将要收为手牌的牌
@@ -702,7 +702,7 @@ Fk:loadTranslationTable{
   ["toObtain"] = "获得的牌",
 }
 
---- 询问玩家对若干牌进行观星。（注意：观看牌堆底的牌则需要先倒序！！）
+--- 询问玩家对若干牌进行观星
 ---
 --- 观星完成后，相关的牌会被置于牌堆顶或者牌堆底。所以这些cards最好不要来自牌堆，一般先用getNCards从牌堆拿出一些牌。
 ---@param player ServerPlayer @ 要询问的玩家
