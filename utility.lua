@@ -660,10 +660,12 @@ Utility.askForArrangeCards = function(player, skillname, cardMap, prompt, free_a
   for _ = #cardMap + 1, #min_limit, 1 do
     table.insert(cardMap, {})
   end
-  --TODO:无default_choice时带取消键
+  pattern = pattern or "."
+  poxi_type = poxi_type or ""
   local result = player.room:askForCustomDialog(player, skillname,
   "packages/utility/qml/ArrangeCardsBox.qml", {
-    cardMap, prompt, box_size, max_limit, min_limit, free_arrange or false, areaNames, pattern or ".", poxi_type or ""
+    cardMap, prompt, box_size, max_limit, min_limit, free_arrange or false, areaNames,
+    pattern or ".", poxi_type or "", ((pattern ~= "." or poxi_type ~= "") and (default_choice == nil))
   })
   if result == "" then
     if default_choice then return default_choice end

@@ -2,6 +2,7 @@
 
 import QtQuick
 import QtQuick.Layouts
+import Fk
 import Fk.Pages
 import Fk.RoomElement
 
@@ -17,12 +18,13 @@ GraphicsBox {
   property var dragging_card: ""
   property var movepos: []
   property bool free_arrange: true
+  property bool cancelable: false
   property string poxi_type: ""
   property string pattern: "."
   property int size: 0
   property int padding: 25
 
-  title.text: Backend.translate(prompt !== "" ? prompt : "Please arrange cards")
+  title.text: Backend.translate(prompt !== "" ? Util.processPrompt(prompt) : "Please arrange cards")
   width: body.width + padding * 2
   height: title.height + body.height + padding * 2
 
@@ -79,20 +81,43 @@ GraphicsBox {
       }
     }
 
-    MetroButton {
-      Layout.alignment: Qt.AlignHCenter
-      id: buttonConfirm
-      text: Backend.translate("OK")
-      width: 120
-      height: 35
+    Row {
+      anchors.bottom: parent.bottom
+      anchors.horizontalCenter: parent.horizontalCenter
+      spacing: 32
 
-      onClicked: {
-        close();
-        roomScene.state = "notactive";
-        const reply = JSON.stringify(getResult());
-        ClientInstance.replyToServer("", reply);
+      MetroButton {
+        width: 120
+        height: 35
+        id: buttonConfirm
+        text: luatr("OK")
+        onClicked: {
+          close();
+          roomScene.state = "notactive";
+          const reply = JSON.stringify(getResult());
+          ClientInstance.replyToServer("", reply);
+        }
+      }
+
+      MetroButton {
+        width: 120
+        height: 35
+        text: luatr("Cancel")
+        visible: root.cancelable
+        onClicked: {
+          close();
+          roomScene.state = "notactive";
+          const ret = [];
+          let i;
+          for (i = 0; i < result.length; i++) {
+            ret.push([]);
+          }
+          const reply = JSON.stringify(ret);
+          ClientInstance.replyToServer("", reply);
+        }
       }
     }
+
   }
 
   Repeater {
@@ -206,10 +231,8 @@ GraphicsBox {
           movepos = [j, b];
         else if (movepos[1] < b || (movepos[1] > c && c != -1))
           movepos = [];
-        
       }
     }
-
     arrangeCards();
   }
 
@@ -222,6 +245,8 @@ GraphicsBox {
           if (j != movepos[0] && result[movepos[0]].length == areaCapacities[movepos[0]]) {
             result[j][i] = result[movepos[0]][movepos[1]];
             result[movepos[0]][movepos[1]] = _card;
+            if (!free_arrange && result[0].length < areaCapacities[0])
+              result[0].sort((a, b) => org_cards[0].indexOf(a.cid) - org_cards[0].indexOf(b.cid));
           } else {
             result[j].splice(i, 1);
             result[movepos[0]].splice(movepos[1], 0, _card);
@@ -236,17 +261,56 @@ GraphicsBox {
   }
 
   function updateCardSelected(_card) {
-    if (areaCapacities.length != 2) return;
     let i = result[0].indexOf(_card);
-    let j = 1;
+    let j;
     if (i == -1) {
-      i = result[1].indexOf(_card);
-      j = 0;
-    }
-    if (result[j].length < areaCapacities[j]) {
-      result[1-j].splice(i, 1);
-      result[j].push(_card);
-      arrangeCards();
+      if (result[0].length < areaCapacities[0]) {
+        if (free_arrange || !org_cards[0].includes(_card.cid)) {
+          for (j = 1; j < result.length; j++) {
+            i = result[j].indexOf(_card);
+            if (i != -1) {
+              result[j].splice(i, 1);
+              result[0].push(_card);
+              arrangeCards();
+              break;
+            }
+          }
+        } else {
+          i = 0;
+          j = 0;
+          while (i < result[0].length && j < org_cards[0].length) {
+            if (org_cards[0][j] == _card.cid) break;
+            if (result[0][i].cid == org_cards[0][j]) {
+              i++;
+              j++;
+            } else {
+              if (org_cards[0].includes(result[0][i].cid))
+                j++;
+              else
+                i++;
+            }
+          }
+          let index;
+          for (j = 1; j < result.length; j++) {
+            index = result[j].indexOf(_card);
+            if (index != -1) {
+              result[j].splice(index, 1);
+              result[0].splice(i, 0, _card);
+              arrangeCards();
+              break;
+            }
+          }
+        }
+      }
+    } else {
+      for (j = 1; j < result.length; j++) {
+        if (result[j].length < areaCapacities[j]) {
+          result[0].splice(i, 1);
+          result[j].push(_card);
+          arrangeCards();
+          break;
+        }
+      }
     }
   }
 
@@ -297,20 +361,22 @@ GraphicsBox {
         else if (pattern != ".")
           card.selectable = lcall("CardFitPattern", card.cid, pattern);
         else {
-          if (free_arrange || dragging_card == "" || result[j].length < areaCapacities[j] + ((result[j].includes(dragging_card)) ? 1 : 0))
+          if (free_arrange || dragging_card == "")
             card.selectable = true;
+          else if (result[j].length < areaCapacities[j] + (result[j].includes(dragging_card) ? 1 : 0))
+            card.selectable = (j != 0);
           else {
-            if (j == 0) {
-              if (org_cards[0].includes(dragging_card.cid))
-                card.selectable = (i == org_cards[0].indexOf(dragging_card.cid));
-              else {
-                card.selectable = true;
-              }
-            } else
-              card.selectable = (org_cards[0].includes(dragging_card.cid) || !result[0].includes(dragging_card) || card.cid == org_cards[0][result[0].indexOf(dragging_card)])
+            if (j == 0)
+              card.selectable = !org_cards[0].includes(dragging_card.cid) || i == org_cards[0].indexOf(dragging_card.cid);
+            else {
+              if (result[0].includes(dragging_card))
+                card.selectable = result[0].length < areaCapacities[0] || !org_cards[0].includes(card.cid) || card.cid == org_cards[0][result[0].indexOf(dragging_card)]
+              else
+                card.selectable = org_cards[0].includes(dragging_card.cid) || card.cid == org_cards[0][result[0].indexOf(dragging_card)]
+            }
           }
         }
-        card.draggable = (dragging_card == "") && (free_arrange || (j == 1) || card.selectable);
+        card.draggable = (dragging_card == "") && (free_arrange || j > 0 || card.selectable);
         card.goBack(true);
         b++;
       }
@@ -362,7 +428,7 @@ GraphicsBox {
       return newArray.concat(elem.map(cid => lcall("GetCardData", cid)));
     }, []);
 
-    [org_cards, prompt, size, areaCapacities, areaLimits, free_arrange, areaNames, pattern, poxi_type] = d;
+    [org_cards, prompt, size, areaCapacities, areaLimits, free_arrange, areaNames, pattern, poxi_type, cancelable] = d;
 
     initializeCards();
   }
