@@ -1399,6 +1399,7 @@ local CardDestructSkill = fk.CreateTriggerSkill{
           mirror_move.to = nil
           mirror_move.toArea = Card.Void
           mirror_move.moveInfo = mirror_info
+          mirror_move.moveMark = nil
           mirror_move.moveVisible = true
           table.insert(mirror_moves, mirror_move)
         end
