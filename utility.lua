@@ -281,20 +281,22 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
     table.insert(moveInfos, {
       from = targetOne.id,
       ids = cards1,
-      toArea = Card.Void,
+      toArea = Card.Processing,
       moveReason = fk.ReasonExchange,
       proposer = player.id,
       skillName = skillName,
+      moveVisible = false,
     })
   end
   if #cards2 > 0 then
     table.insert(moveInfos, {
       from = targetTwo.id,
       ids = cards2,
-      toArea = Card.Void,
+      toArea = Card.Processing,
       moveReason = fk.ReasonExchange,
       proposer = player.id,
       skillName = skillName,
+      moveVisible = false,
     })
   end
   if #moveInfos > 0 then
@@ -303,33 +305,35 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
   moveInfos = {}
   if not targetTwo.dead then
     local to_ex_cards = table.filter(cards1, function (id)
-      return room:getCardArea(id) == Card.Void
+      return room:getCardArea(id) == Card.Processing
     end)
     if #to_ex_cards > 0 then
       table.insert(moveInfos, {
         ids = to_ex_cards,
-        fromArea = Card.Void,
+        fromArea = Card.Processing,
         to = targetTwo.id,
         toArea = Card.PlayerHand,
         moveReason = fk.ReasonExchange,
         proposer = player.id,
         skillName = skillName,
+        moveVisible = false,
       })
     end
   end
   if not targetOne.dead then
     local to_ex_cards = table.filter(cards2, function (id)
-      return room:getCardArea(id) == Card.Void
+      return room:getCardArea(id) == Card.Processing
     end)
     if #to_ex_cards > 0 then
       table.insert(moveInfos, {
         ids = to_ex_cards,
-        fromArea = Card.Void,
+        fromArea = Card.Processing,
         to = targetOne.id,
         toArea = Card.PlayerHand,
         moveReason = fk.ReasonExchange,
         proposer = player.id,
         skillName = skillName,
+        moveVisible = false,
       })
     end
   end
@@ -338,7 +342,7 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
   end
   table.insertTable(cards1, cards2)
   local dis_cards = table.filter(cards1, function (id)
-    return room:getCardArea(id) == Card.Void
+    return room:getCardArea(id) == Card.Processing
   end)
   if #dis_cards > 0 then
     room:moveCardTo(dis_cards, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile, skillName, nil, true, player.id)
@@ -356,7 +360,7 @@ Utility.swapHandCards = function(room, player, targetOne, targetTwo, skillName)
   table.clone(targetTwo.player_cards[Player.Hand]), skillName)
 end
 
--- 将一名角色的卡牌与牌堆中的卡牌交换（注意：牌堆的卡需预先取出）
+-- 将一名角色的卡牌与牌堆中的卡牌交换
 ---@param player ServerPlayer @ 移动的目标
 ---@param cards1 integer[] @ 将要放到牌堆的牌
 ---@param cards2 integer[] @ 将要收为手牌的牌
@@ -368,57 +372,90 @@ Utility.swapCardsWithPile = function(player, cards1, cards2, skillName, pile_nam
   proposer = proposer or player.id
   local room = player.room
   local handcards = player:getCardIds{Player.Hand, Player.Equip}
-
   if pile_name == "Top" or pile_name == "Bottom" then
+    cards2 = table.filter(cards2, function (id)
+      return not table.contains(handcards, id)
+    end)
+    local temp = table.simpleClone(cards1)
+    table.insertTable(temp, cards2)
+    room:moveCardTo(temp, Card.Processing, nil, fk.ReasonExchange, skillName, nil, visible, player.id, nil, proposer)
+    room:delay(1000)
+    cards1 = table.filter(cards1, function (id)
+      return room:getCardArea(id) == Card.Processing
+    end)
     local moveInfos = {}
-    local drawPilePosition = (pile_name == "Top") and 0 or #room.draw_pile
-    local j = 1
-    for i = 1, #cards1, 1 do
-      local id = cards1[i]
-      if table.contains(handcards, id) then
-        table.insert(moveInfos, {
-          ids = {id},
-          from = player.id,
-          toArea = Card.DrawPile,
-          moveReason = fk.ReasonJustMove,
-          skillName = skillName,
-          drawPilePosition = drawPilePosition + i,
-        })
-      else
-        if pile_name == "Top" then
-          table.insert(room.draw_pile, j, id)
-          j = j + 1
-        else
-          table.insert(room.draw_pile, id)
+    if #cards1 > 0 then
+      local drawPilePosition = -1
+      if pile_name == "Top" then
+        cards1 = table.reverse(cards1)
+        drawPilePosition = 1
+      end
+      --FIXME:姑且以此法解决卡牌UI上滞留处理区的问题
+      if proposer ~= player.id and not visible then
+        temp = table.filter(cards1, function (id)
+          return table.contains(handcards, id)
+        end)
+        local move_to_notify = {
+          toArea = Card.DiscardPile,
+          moveInfo = {},
+          moveReason = fk.ReasonExchange
+        }
+        for _, id in ipairs(temp) do
+          table.insert(move_to_notify.moveInfo,
+          { cardId = id, fromArea = Card.Processing })
+        end
+        if #temp > 0 then
+          room:notifyMoveCards({player}, {move_to_notify}, true)
         end
       end
+      table.insert(moveInfos, {
+        ids = cards1,
+        toArea = Card.DrawPile,
+        moveReason = fk.ReasonExchange,
+        proposer = proposer,
+        skillName = skillName,
+        moveVisible = visible,
+        visiblePlayers = proposer,
+        drawPilePosition = drawPilePosition,
+      })
+    end
+    if player.dead then
+      table.insert(moveInfos, {
+        ids = cards2,
+        toArea = Card.DiscardPile,
+        moveReason = fk.ReasonPutIntoDiscardPile,
+      })
+    else
+      table.insert(moveInfos, {
+        ids = cards2,
+        to = player.id,
+        toArea = Card.PlayerHand,
+        moveReason = fk.ReasonExchange,
+        proposer = proposer,
+        skillName = skillName,
+        moveVisible = visible,
+        visiblePlayers = proposer,
+      })
     end
     if #moveInfos > 0 then
       room:moveCards(table.unpack(moveInfos))
     end
-    cards2 = table.filter(cards2, function (id)
-      return not table.contains(handcards, id)
-    end)
   else
     cards1 = table.filter(cards1, function (id)
       return table.contains(handcards, id)
     end)
     if #cards1 > 0 then
       player:addToPile(pile_name, cards1, visible, skillName)
+      if player.dead then return end
     end
     cards2 = table.filter(player:getPile(pile_name), function (id)
       return table.contains(cards2, id)
     end)
-  end
-
-  if #cards2 == 0 then return false end
-  if player.dead then
-    room:moveCardTo(cards2, Card.DiscardPile, nil, fk.ReasonJustMove, skillName, nil, true)
-  else
-    room:moveCardTo(cards2, Card.PlayerHand, player, fk.ReasonPrey, skillName, nil, visible, proposer)
+    if #cards2 > 0 then
+      room:moveCardTo(cards2, Card.PlayerHand, player, fk.ReasonExchange, skillName, nil, visible, proposer, nil, player.id)
+    end
   end
 end
-
 
 -- 根据模式修改角色的属性
 ---@param player ServerPlayer @ 要换将的玩家
@@ -873,6 +910,7 @@ Utility.doDistribution = function (room, list, proposer, skillName)
           moveReason = fk.ReasonGive,
           proposer = proposer,
           skillName = skillName,
+          visiblePlayers = proposer,
         })
       end
       if #noFrom > 0 then
@@ -883,6 +921,7 @@ Utility.doDistribution = function (room, list, proposer, skillName)
           moveReason = fk.ReasonGive,
           proposer = proposer,
           skillName = skillName,
+          visiblePlayers = proposer,
         })
       end
     end
