@@ -317,6 +317,7 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
         proposer = player.id,
         skillName = skillName,
         moveVisible = false,
+        visiblePlayers = targetOne.id,
       })
     end
   end
@@ -334,6 +335,7 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
         proposer = player.id,
         skillName = skillName,
         moveVisible = false,
+        visiblePlayers = targetTwo.id,
       })
     end
   end
