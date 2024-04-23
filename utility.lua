@@ -622,15 +622,16 @@ Fk:loadTranslationTable{
 ---@param name2 string @ 第一行卡牌名称
 ---@param cards1 integer[] @ 第一行的卡牌
 ---@param cards2 integer[] @ 第二行的卡牌
----@param prompt string @ 操作提示（FXIME:暂时无效）
+---@param prompt string @ 操作提示
 ---@param n? integer @ 至多可交换的卡牌数量（不填或负数则无限制）
+---@param cancelable? boolean @ 是否可取消，默认可以
 ---@return integer[]
-Utility.askForExchange = function(player, name1, name2, cards1, cards2, prompt, n)
+Utility.askForExchange = function(player, name1, name2, cards1, cards2, prompt, n, cancelable)
   n = n or -1
   return player.room:askForPoxi(player, "qml_exchange", {
     { name1, cards1 },
     { name2, cards2 },
-  }, {prompt, n})
+  }, {prompt, n}, (cancelable == nil) and true or cancelable)
 end
 
 Fk:addPoxiMethod{
@@ -648,7 +649,7 @@ Fk:addPoxiMethod{
     return #selected < x + max_x
   end,
   feasible = function(selected, data, extra_data)
-    if data == nil then return false end
+    if data == nil or #selected == 0 then return false end
     local cards = data[1][2]
     return #table.filter(selected, function (id)
       return table.contains(cards, id)
