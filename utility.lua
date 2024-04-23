@@ -372,6 +372,7 @@ end
 ---@param proposer? integer @ 移动的操作者（默认同player）
 Utility.swapCardsWithPile = function(player, cards1, cards2, skillName, pile_name, visible, proposer)
   proposer = proposer or player.id
+  visible = (visible ~= nil) and visible or false
   local room = player.room
   local handcards = player:getCardIds{Player.Hand, Player.Equip}
   if pile_name == "Top" or pile_name == "Bottom" then
