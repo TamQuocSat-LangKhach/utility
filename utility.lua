@@ -393,24 +393,6 @@ Utility.swapCardsWithPile = function(player, cards1, cards2, skillName, pile_nam
         cards1 = table.reverse(cards1)
         drawPilePosition = 1
       end
-      --FIXME:姑且以此法解决卡牌UI上滞留处理区的问题
-      if proposer ~= player.id and not visible then
-        temp = table.filter(cards1, function (id)
-          return table.contains(handcards, id)
-        end)
-        local move_to_notify = {
-          toArea = Card.DiscardPile,
-          moveInfo = {},
-          moveReason = fk.ReasonExchange
-        }
-        for _, id in ipairs(temp) do
-          table.insert(move_to_notify.moveInfo,
-          { cardId = id, fromArea = Card.Processing })
-        end
-        if #temp > 0 then
-          room:notifyMoveCards({player}, {move_to_notify}, true)
-        end
-      end
       table.insert(moveInfos, {
         ids = cards1,
         toArea = Card.DrawPile,
