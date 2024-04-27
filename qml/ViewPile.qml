@@ -7,7 +7,7 @@ import Fk.RoomElement
 ColumnLayout {
   id: root
   anchors.fill: parent
-  property var extra_data: ({ name: "", data: { value: {} } })
+  property var extra_data: ({ name: "", data: {} })
   signal finish()
 
   BigGlowText {
@@ -25,7 +25,7 @@ ColumnLayout {
     Layout.alignment: Qt.AlignHCenter
     clip: true
 
-    model: extra_data.data.value
+    model: extra_data.data.value ? extra_data.data.value : extra_data.data
 
     delegate: CardItem {
       id: cardItem
