@@ -168,6 +168,9 @@ GraphicsBox {
   function loadData(data) {
     const d = data;
     cards = d[0].map(cid => {
+      if (typeof cid === 'object') {
+        return cid;
+      }
       return lcall("GetCardData", cid);
     });
     ok_options = d[1];
