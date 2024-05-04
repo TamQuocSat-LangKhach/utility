@@ -1936,6 +1936,7 @@ end
 ---@param delay? boolean
 ---@param skillName string
 Utility.gainAnExtraTurn = function(player, delay, skillName)
+  fk.qWarning 'Utility.gainAnExtraTurn deprecated; use SPlayer:gainAnExtraTurn'
   player:gainAnExtraTurn(delay, skillName)
 end
 
@@ -1946,6 +1947,7 @@ end
 ---@param operator string @ 运算符，有 ``"<"`` ``">"`` ``"<="`` ``">="`` ``"=="`` ``"~="``
 ---@return boolean @ 返回比较结果，不计入距离结果永远为false
 Utility.compareDistance = function(from, to, num, operator)
+  fk.qWarning 'Utility.compareDistance deprecated; use Player:compareDistance'
   local distance = from:distanceTo(to)
   if distance < 0 or num < 0 then return false end
   if operator == ">" then
@@ -2068,6 +2070,7 @@ Fk:loadTranslationTable{
   ["#askForDiscussion"] = "请展示一张手牌进行议事",
   ["AskForDiscussion"] = "议事",
   ["noresult"] = "无结果",
+  ["#ShowDiscussionResult"] = "%from 的议事结果为 %arg",
 }
 
 Utility.JointPindianEvent = "GameEvent.JointPindian"
