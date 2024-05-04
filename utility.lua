@@ -1918,6 +1918,17 @@ Utility.clearHandMark = function(player, name)
   end
 end
 
+--清理遗留在处理区的卡牌
+---@param room Room @ 房间
+---@param cards integer[] @ 待清理的卡牌
+---@param skillName? string @ 技能名
+Utility.clearRemainCards = function(room, cards, skillName)
+  cards = table.filter(cards, function(id) return room:getCardArea(id) == Card.Processing end)
+  if #cards > 0 then
+    room:moveCardTo(cards, Card.DiscardPile, nil, fk.ReasonJustMove, skillName)
+  end
+end
+
 --- 执行额外回合（修复getCurrentExtraTurnReason bug）
 ---@param player ServerPlayer
 ---@param delay? boolean
