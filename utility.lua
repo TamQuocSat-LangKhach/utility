@@ -1681,9 +1681,11 @@ local exChooseSkill = fk.CreateActiveSkill{
     local checkpoint = true
     local card = Fk:getCardById(to_select)
 
+    --[[
     if not self.include_equip then
       checkpoint = checkpoint and (Fk:currentRoom():getCardArea(to_select) ~= Player.Equip)
     end
+    ]]
 
     if self.pattern and self.pattern ~= "" then
       checkpoint = checkpoint and (Exppattern:Parse(self.pattern):match(card))
