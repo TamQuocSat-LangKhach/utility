@@ -1721,9 +1721,6 @@ Fk:addSkill(exChooseSkill)
 ---@param no_indicate? boolean @ 是否不显示指示线
 ---@return integer[], integer[]
 function Utility.askForChooseCardsAndPlayers(self, player, minCardNum, maxCardNum, targets, minTargetNum, maxTargetNum, pattern, prompt, skillName, cancelable, no_indicate)
-  if minCardNum < 1 or minTargetNum < 1 then
-    return {}, {}
-  end
   cancelable = (cancelable == nil) and true or cancelable
   no_indicate = no_indicate or false
   pattern = pattern or "."
