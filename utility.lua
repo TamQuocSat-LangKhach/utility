@@ -1990,7 +1990,7 @@ Utility.Discussion = function(data)
     reason = discussionData.reason,
   }
   local prompt = "#askForDiscussion"
-  local data = { "choose_cards_skill", prompt, true, extraData }
+  local data = { "choose_cards_skill", prompt, false, extraData }
 
   local targets = {}
   for _, to in ipairs(discussionData.tos) do
