@@ -841,12 +841,33 @@ Utility.askforViewCardsAndChoice = function(player, cards, choices, skillname, p
 end
 
 --- 让玩家观看一些卡牌（用来取代fillAG式观看）。
----@param player ServerPlayer @ 要询问的玩家
+---@param player ServerPlayer | ServerPlayer[] @ 要询问的玩家
 ---@param cards integer[] @ 待选卡牌
 ---@param skillname? string @ 烧条技能名
 ---@param prompt? string @ 操作提示
 Utility.viewCards = function(player, cards, skillname, prompt)
-  Utility.askforChooseCardsAndChoice(player, cards, {}, skillname or "utility_viewcards", prompt or "$ViewCards", {"OK"})
+  if player.class then
+    Utility.askforChooseCardsAndChoice(player, cards, {}, skillname or "utility_viewcards", prompt or "$ViewCards", {"OK"})
+  else
+    for _, p in ipairs(player) do
+      p.request_data = json.encode({
+        path = "packages/utility/qml/ChooseCardsAndChoiceBox.qml",
+        data = {
+          cards,
+          {},
+          prompt or "$ViewCards",
+          { "OK" },
+          1,
+          1,
+          {}
+        },
+      })
+    end
+
+    local room = player[1].room
+    room:notifyMoveFocus(player, skillname)
+    room:doBroadcastRequest("CustomDialog", player)
+  end
 end
 
 Fk:loadTranslationTable{
