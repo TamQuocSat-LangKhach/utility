@@ -2,6 +2,7 @@
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Fk
 import Fk.Pages
 import Fk.RoomElement
@@ -21,14 +22,23 @@ GraphicsBox {
   width: Math.max(40 + Math.min(5, active_skills.count) * (88 + (generals ? 36 : 0)), 248)
   height: Math.max(60 + Math.min(32, active_skills.count) * 11, 230)
 
-  ColumnLayout {
+  Flickable {
+    ScrollBar.vertical: ScrollBar {}
+    flickableDirection: Flickable.VerticalFlick
+    
+
     anchors.fill: parent
     anchors.topMargin: 40
     anchors.leftMargin: 20
     anchors.rightMargin: 20
-    anchors.bottomMargin: 20
+    anchors.bottomMargin: 50
+
+    contentWidth: skillsList.width
+    contentHeight: skillsList.height
+    clip: true
 
     GridLayout {
+      id: skillsList
       Layout.alignment: Qt.AlignHCenter
       columns: 5
       Repeater {
@@ -65,41 +75,44 @@ GraphicsBox {
         }
       }
     }
+  }
 
-    Row {
+  Row {
+    Layout.alignment: Qt.AlignHCenter
+    spacing: 8
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.bottom: parent.bottom
+    anchors.bottomMargin: 10
+
+    MetroButton {
       Layout.alignment: Qt.AlignHCenter
-      spacing: 8
+      id: buttonConfirm
+      text: luatr("OK")
+      width: 120
+      height: 35
 
-      MetroButton {
-        Layout.alignment: Qt.AlignHCenter
-        id: buttonConfirm
-        text: luatr("OK")
-        width: 120
-        height: 35
-
-        onClicked: {
-          close();
-          roomScene.state = "notactive";
-          ClientInstance.replyToServer("", JSON.stringify(root.selected));
-        }
+      onClicked: {
+        close();
+        roomScene.state = "notactive";
+        ClientInstance.replyToServer("", JSON.stringify(root.selected));
       }
+    }
 
-      MetroButton {
-        id: detailBtn
-        width: 80
-        height: 35
-        text: luatr("Show General Detail")
-        onClicked: {
-          let _skills = [];
-          if (root.selected.length > 0) {
-            _skills = root.selected;
-          } else {
-            for (let i = 0; i < active_skills.count; i++){
-              _skills.push(active_skills.get(i).name);
-            }
+    MetroButton {
+      id: detailBtn
+      width: 80
+      height: 35
+      text: luatr("Show General Detail")
+      onClicked: {
+        let _skills = [];
+        if (root.selected.length > 0) {
+          _skills = root.selected;
+        } else {
+          for (let i = 0; i < active_skills.count; i++){
+            _skills.push(active_skills.get(i).name);
           }
-          roomScene.startCheat("../../packages/utility/qml/SkillDetail", { skills: _skills });
         }
+        roomScene.startCheat("../../packages/utility/qml/SkillDetail", { skills: _skills });
       }
     }
   }
