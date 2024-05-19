@@ -63,11 +63,11 @@ Utility.damageByCardEffect = function(room, by_user)
   local d_event = room.logic:getCurrentEvent():findParent(GameEvent.Damage, true)
   if d_event == nil then return false end
   local damage = d_event.data[1]
-  if damage.chain or damage.card == nil then return false end
+  if damage.from == nil or damage.chain or damage.card == nil then return false end
   local c_event = d_event:findParent(GameEvent.CardEffect, false)
   if c_event == nil then return false end
   return damage.card == c_event.data[1].card and
-  (not by_user or d_event.data[1].from.id == c_event.data[1].from)
+  (not by_user or damage.from.id == c_event.data[1].from)
 end
 
 
