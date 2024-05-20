@@ -7,7 +7,7 @@ Fk:addQmlMark{
     if type(value) ~= "table" then return " " end
     return table.concat(table.map(value, function(suit)
       return Fk:translate(Card.getSuitString({ suit = suit }, true))
-    end), " ")
+    end), "")
   end,
 }
 -- 在脸上显示类别
