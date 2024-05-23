@@ -471,7 +471,7 @@ Utility.changeHero = function(player, new_general, maxHpChange)
 
   local skills = {}
   for _, s in ipairs(player.player_skills) do
-    if not (s.attached_equip or s.name[#s.name] == "&") then
+    if s:isPlayerSkill(player) then
       table.insertIfNeed(skills, s.name)
     end
   end
