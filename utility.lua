@@ -367,7 +367,7 @@ end
 ---@param cards1 integer[] @ 将要放到牌堆的牌
 ---@param cards2 integer[] @ 将要收为手牌的牌
 ---@param skillName string @ 技能名
----@param pile_name string @ 交换的私有牌堆名，特别的，为"Top"则为牌堆顶，"Bottom"则为牌堆底
+---@param pile_name string @ 交换的私有牌堆名，特别的，为"Top"则为牌堆顶，"Bottom"则为牌堆底，"discardPile"则为弃牌堆
 ---@param visible? boolean @ 是否明牌移动
 ---@param proposer? integer @ 移动的操作者（默认同player）
 Utility.swapCardsWithPile = function(player, cards1, cards2, skillName, pile_name, visible, proposer)
@@ -382,7 +382,6 @@ Utility.swapCardsWithPile = function(player, cards1, cards2, skillName, pile_nam
     local temp = table.simpleClone(cards1)
     table.insertTable(temp, cards2)
     room:moveCardTo(temp, Card.Processing, nil, fk.ReasonExchange, skillName, nil, visible, player.id, nil, proposer)
-    room:delay(1000)
     cards1 = table.filter(cards1, function (id)
       return room:getCardArea(id) == Card.Processing
     end)
@@ -420,6 +419,48 @@ Utility.swapCardsWithPile = function(player, cards1, cards2, skillName, pile_nam
         skillName = skillName,
         moveVisible = visible,
         visiblePlayers = proposer,
+      })
+    end
+    if #moveInfos > 0 then
+      room:moveCards(table.unpack(moveInfos))
+    end
+  elseif pile_name == "discardPile" then
+    cards1 = table.filter(cards1, function (id)
+      return table.contains(handcards, id)
+    end)
+    cards2 = table.filter(cards2, function (id)
+      return not table.contains(handcards, id)
+    end)
+    local temp = table.simpleClone(cards1)
+    table.insertTable(temp, cards2)
+    room:moveCardTo(temp, Card.Processing, nil, fk.ReasonExchange, skillName, nil, visible, player.id, nil, proposer)
+    cards2 = table.filter(cards2, function (id)
+      return room:getCardArea(id) == Card.Processing
+    end)
+    local moveInfos = {}
+    temp = table.simpleClone(cards1)
+
+    if #cards2 > 0 then
+      if player.dead then
+        table.insertTable(temp, cards2)
+      else
+        table.insert(moveInfos, {
+          ids = cards2,
+          to = player.id,
+          toArea = Card.PlayerHand,
+          moveReason = fk.ReasonExchange,
+          proposer = proposer,
+          skillName = skillName,
+          moveVisible = visible,
+          visiblePlayers = proposer,
+        })
+      end
+    end
+    if #temp > 0 then
+      table.insert(moveInfos, {
+        ids = temp,
+        toArea = Card.DiscardPile,
+        moveReason = fk.ReasonPutIntoDiscardPile,
       })
     end
     if #moveInfos > 0 then
