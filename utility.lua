@@ -1377,7 +1377,7 @@ Utility.GetFriends = function(room, player, include_self, include_dead)
   end
   local players = include_dead and room.players or room.alive_players
   local friends = {player}
-  if table.contains({"aaa_role_mode", "vanished_dragon", "zombie_mode"}, room.settings.gameMode) then
+  if table.contains({"aaa_role_mode", "aab_role_mode", "vanished_dragon", "zombie_mode"}, room.settings.gameMode) then
     if player.role == "lord" or player.role == "loyalist" then
       friends = table.filter(players, function(p) return p.role == "lord" or p.role == "loyalist" end)
     else
