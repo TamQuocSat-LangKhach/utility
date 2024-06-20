@@ -1333,7 +1333,7 @@ Utility.askForPlayCard = function(room, player, cards, pattern, skillName, promp
     end
   end
   local strid = table.concat(cardIds, ",")
-  local useable_pattern = table.concat(useables, ",") .. "|.|.|.|.|.|" .. (strid == "" and "." or "^(" .. strid .. ")")
+  local useable_pattern = ".|.|.|.|" .. table.concat(useables, ",") .. "|.|" .. (strid == "" and "." or "^(" .. strid .. ")")
   extra_data = extra_data or {}
   local use = room:askForUseCard(player, skillName, useable_pattern, prompt, true, extra_data)
   if not use then return end
