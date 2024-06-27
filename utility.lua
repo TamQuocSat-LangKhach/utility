@@ -129,19 +129,15 @@ end
 ---@return boolean
 Utility.canTransferTarget = function(target, data, distance_limited)
   local room = target.room
-  local Notify_from = room:getPlayerById(data.from)
-  if Notify_from:isProhibited(target, data.card) or not data.card.skill:modTargetFilter(
-    target.id, {}, data.from, data.card, distance_limited
-  ) then return false end
+  if room:getPlayerById(data.from):isProhibited(target, data.card) or
+  not data.card.skill:modTargetFilter(target.id, {}, data.from, data.card, distance_limited) then return false end
 
   --target_filter check, for collateral,diversion...
-  --FIXME：借刀需要补modTargetFilter，不给targetFilter传使用者真是离大谱，目前只能通过强制修改Self来实现
   local ho_spair_target = data.subTargets
   if type(ho_spair_target) == "table" then
     local passed_target = {target.id}
-    Self = Notify_from
-    for c_pid in ipairs(ho_spair_target) do
-      if not data.card.skill:targetFilter(c_pid, passed_target, {}, data.card) then return false end
+    for _, c_pid in ipairs(ho_spair_target) do
+      if not data.card.skill:modTargetFilter(c_pid, passed_target, data.from, data.card, distance_limited) then return false end
       table.insert(passed_target, c_pid)
     end
   end
