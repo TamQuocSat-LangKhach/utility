@@ -1420,8 +1420,6 @@ Utility.ConvertNumber = function(value, to_num)
     ret = tonumber(ret)
   else
     if not tonumber(value) then return value end
-    -- 耦一个两
-    if tonumber(value) == 2 then return "两" end
     local str = tostring(value)
     if value > 9999 then
       printf("你确定需要<%s>那么大的数字？", str)
