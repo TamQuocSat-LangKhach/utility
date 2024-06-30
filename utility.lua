@@ -1382,8 +1382,11 @@ Utility.ConvertNumber = function(value, to_num)
   local ret = "" ---@type number | string
   local candidate = {"零", "一", "二", "三", "四", "五", "六", "七", "八", "九"}
   local space = {"十", "百", "千"}
+
   if to_num then
     if tonumber(value) then return tonumber(value) end
+    -- 耦一个两
+    if value == "两" then return 2 end
     if value:find("万") or value:find("亿") then
       printf("你确定需要<%s>那么大的数字？", value)
       return value
@@ -1411,6 +1414,8 @@ Utility.ConvertNumber = function(value, to_num)
     ret = tonumber(ret)
   else
     if not tonumber(value) then return value end
+    -- 耦一个两
+    if tonumber(value) == 2 then return "两" end
     local str = tostring(value)
     if value > 9999 then
       printf("你确定需要<%s>那么大的数字？", str)
