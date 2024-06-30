@@ -1506,8 +1506,8 @@ Fk:loadTranslationTable{
 
 --花色互转（支持int(Card.Heart)，string("heart")，icon("♥")，symbol(translate后的红色"♥")）
 ---@param value any @ 花色
----@param input_type string @ 输入类型("int|str|icon|sym")
----@param output_type string @ 输出类型("int|str|icon|sym")
+---@param input_type "int"|"str"|"icon"|"sym"
+---@param output_type "int"|"str"|"icon"|"sym"
 Utility.ConvertSuit = function(value, input_type, output_type)
   local mapper = {
     ["int"] = {Card.Spade, Card.Heart, Card.Club, Card.Diamond, Card.NoSuit},
@@ -1518,6 +1518,67 @@ Utility.ConvertSuit = function(value, input_type, output_type)
   return mapper[output_type][table.indexOf(mapper[input_type], value)]
 end
 
+--将数字转换为汉字，或将汉字转换为数字
+---@param value number | string @ 数字或汉字
+---@param to_num bool @ 是否转换为数字
+---@return number | string @ 结果
+Utility.ConvertNumber = function(value, to_num)
+  local ret = "" ---@type number | string
+  local candidate = {"零", "一", "二", "三", "四", "五", "六", "七", "八", "九"}
+  local space = {"十", "百", "千"}
+  if to_num then
+    if tonumber(value) then return tonumber(value) end
+    if value:find("万") or value:find("亿") then
+      printf("你确定需要<%s>那么大的数字？", value)
+      return value
+    end
+    local leng = value:len()
+    for i = leng, 1, -1 do
+      local _start = (i - 1) * 3 + 1
+      local _end = (i) * 3
+      local num = value:sub(_start, _end)
+      if table.contains(candidate, num) then
+        ret = tostring(table.indexOf(candidate, num) - 1) .. ret
+      elseif table.contains(space, num) then
+        local pos = table.indexOf(space, num) + 1
+        local suc = pos - ret:len() - 1
+        if suc > 0 then
+          for j = 1, suc, 1 do
+            ret = "0" .. ret
+          end
+        end
+        if i == 1 then
+          ret = "1" .. ret
+        end
+      end
+    end
+    ret = tonumber(ret)
+  else
+    if not tonumber(value) then return value end
+    local str = tostring(value)
+    if value > 9999 then
+      printf("你确定需要<%s>那么大的数字？", str)
+      return value
+    end
+    local leng = str:len()
+    for i = leng, 1, -1 do
+      local pos = leng - i
+      local num = candidate[tonumber(str:sub(i, i)) + 1]
+      if pos > 0 then
+        num = num .. space[pos - 1 % 3 + 1]
+      end
+      ret = num .. ret
+    end
+    if leng > 1 then
+      ret = string.gsub(ret, "^一十", "")
+    end
+    for _, spc in ipairs(space) do
+      ret = string.gsub(ret, "零" .. spc, "零")
+    end
+    ret = string.gsub(ret, "零零+", "零")
+  end
+  return ret
+end
 
 -- 阶段互译 int和str类型互换
 ---@param phase string|integer|table
