@@ -129,19 +129,15 @@ end
 ---@return boolean
 Utility.canTransferTarget = function(target, data, distance_limited)
   local room = target.room
-  local Notify_from = room:getPlayerById(data.from)
-  if Notify_from:isProhibited(target, data.card) or not data.card.skill:modTargetFilter(
-    target.id, {}, data.from, data.card, distance_limited
-  ) then return false end
+  if room:getPlayerById(data.from):isProhibited(target, data.card) or
+  not data.card.skill:modTargetFilter(target.id, {}, data.from, data.card, distance_limited) then return false end
 
   --target_filter check, for collateral,diversion...
-  --FIXME：借刀需要补modTargetFilter，不给targetFilter传使用者真是离大谱，目前只能通过强制修改Self来实现
   local ho_spair_target = data.subTargets
   if type(ho_spair_target) == "table" then
     local passed_target = {target.id}
-    Self = Notify_from
-    for c_pid in ipairs(ho_spair_target) do
-      if not data.card.skill:targetFilter(c_pid, passed_target, {}, data.card) then return false end
+    for _, c_pid in ipairs(ho_spair_target) do
+      if not data.card.skill:modTargetFilter(c_pid, passed_target, data.from, data.card, distance_limited) then return false end
       table.insert(passed_target, c_pid)
     end
   end
@@ -688,146 +684,6 @@ Fk:loadTranslationTable{
   ["qml_exchange"] = "换牌",
   ["#AskForQMLExchange"] = "选择要交换的卡牌",
 }
-
---- 询问玩家在自定义大小的框中排列卡牌（观星、交换、拖拽选牌）
----@param player ServerPlayer @ 要询问的玩家
----@param skillname string @ 烧条技能名
----@param cardMap any @ { "牌堆1卡表", "牌堆2卡表", …… }
----@param prompt? string @ 操作提示
----@param box_size? integer @ 数值对应卡牌平铺张数的最大值，为0则有单个卡位，每张卡占100单位长度，默认为7
----@param max_limit? integer[] @ 每一行牌上限 { 第一行, 第二行，…… }，不填写则不限
----@param min_limit? integer[] @ 每一行牌下限 { 第一行, 第二行，…… }，不填写则不限
----@param free_arrange? boolean @ 是否允许自由排列第一行卡的位置，默认不能
----@param pattern? string @ 控制第一行卡牌是否可以操作，不填写默认均可操作
----@param poxi_type? string @ 控制每张卡牌是否可以操作、确定键是否可以点击，不填写默认均可操作
----@param default_choice? table[] @ 超时的默认响应值，在带poxi_type时需要填写
----@return table[]
-Utility.askForArrangeCards = function(player, skillname, cardMap, prompt, free_arrange, box_size, max_limit, min_limit, pattern, poxi_type, default_choice)
-  prompt = prompt or ""
-  local areaNames = {}
-  if type(cardMap[1]) == "number" then
-    cardMap = {cardMap}
-  else
-    for i = #cardMap, 1, -1 do
-      if type(cardMap[i]) == "string" then
-        table.insert(areaNames, 1, cardMap[i])
-        table.remove(cardMap, i)
-      end
-    end
-  end
-  if #areaNames == 0 then
-    areaNames = {skillname, "toObtain"}
-  end
-  box_size = box_size or 7
-  max_limit = max_limit or {#cardMap[1], #cardMap > 1 and #cardMap[2] or #cardMap[1]}
-  min_limit = min_limit or {0, 0}
-  for _ = #cardMap + 1, #min_limit, 1 do
-    table.insert(cardMap, {})
-  end
-  pattern = pattern or "."
-  poxi_type = poxi_type or ""
-  local result = player.room:askForCustomDialog(player, skillname,
-  "packages/utility/qml/ArrangeCardsBox.qml", {
-    cardMap, prompt, box_size, max_limit, min_limit, free_arrange or false, areaNames,
-    pattern or ".", poxi_type or "", ((pattern ~= "." or poxi_type ~= "") and (default_choice == nil))
-  })
-  if result == "" then
-    if default_choice then return default_choice end
-    for j = 1, #min_limit, 1 do
-      if #cardMap[j] < min_limit[j] then
-        local cards = {table.connect(table.unpack(cardMap))}
-        if #min_limit > 1 then
-          for i = 2, #min_limit, 1 do
-            table.insert(cards, {})
-            if #cards[i] < min_limit[i] then
-              for _ = 1, min_limit[i] - #cards[i], 1 do
-                table.insert(cards[i], table.remove(cards[1], #cards[1] + #cards[i] - min_limit[i] + 1))
-              end
-            end
-          end
-          if #cards[1] > max_limit[1] then
-            for i = 2, #max_limit, 1 do
-              while #cards[i] < max_limit[i] do
-                table.insert(cards[i], table.remove(cards[1], max_limit[1] + 1))
-                if #cards[1] == max_limit[1] then return cards end
-              end
-            end
-          end
-        end
-        return cards
-      end
-    end
-    return cardMap
-  end
-  return json.decode(result)
-end
-
-Fk:loadTranslationTable{
-  ["toObtain"] = "获得的牌",
-}
-
---- 询问玩家对若干牌进行观星
----
---- 观星完成后，相关的牌会被置于牌堆顶或者牌堆底。所以这些cards最好不要来自牌堆，一般先用getNCards从牌堆拿出一些牌。
----@param player ServerPlayer @ 要询问的玩家
----@param cards integer[] @ 可以被观星的卡牌id列表
----@param top_limit? integer[] @ 置于牌堆顶的牌的限制(下限,上限)，不填写则不限
----@param bottom_limit? integer[] @ 置于牌堆底的牌的限制(下限,上限)，不填写则不限
----@param customNotify? string @ 自定义读条操作提示
----@param prompt? string @ 观星框的标题(暂时雪藏)
----@param noPut? boolean @ 是否进行放置牌操作
----@param areaNames? string[] @ 左侧提示信息
----@return table<"top"|"bottom", integer[]>
-Utility.askForGuanxing = function (player, cards, top_limit, bottom_limit, customNotify, prompt, noPut, areaNames)
-  local cardMap = {cards}
-  local top, bottom = {}, {}
-  if top_limit and top_limit[2] == 0 then
-    table.insertTable(cardMap, areaNames or {"Bottom"})
-    bottom = Utility.askForArrangeCards(
-      player, customNotify or "AskForGuanxing",
-      cardMap, prompt, true, #cards < 8 and 0 or 7,
-      {bottom_limit and bottom_limit[2] or #cards},
-      {bottom_limit and bottom_limit[1] or 0}
-    )[1]
-  elseif bottom_limit and bottom_limit[2] == 0 then
-    table.insertTable(cardMap, areaNames or {"Top"})
-    top = Utility.askForArrangeCards(
-      player, customNotify or "AskForGuanxing",
-      cardMap, prompt, true, #cards < 8 and 0 or 7,
-      {top_limit and top_limit[2] or #cards},
-      {top_limit and top_limit[1] or 0}
-    )[1]
-  else
-    table.insertTable(cardMap, areaNames or {"Top", "Bottom"})
-    local ret = Utility.askForArrangeCards(
-      player, customNotify or "AskForGuanxing",
-      cardMap, prompt, true, #cards < 8 and 0 or 7,
-      {top_limit and top_limit[2] or #cards, bottom_limit and bottom_limit[2] or #cards},
-      {top_limit and top_limit[1] or 0, bottom_limit and bottom_limit[1] or 0}
-    )
-    top, bottom = ret[1], ret[2]
-  end
-  if not noPut then
-    local room = player.room
-    for i = #top, 1, -1 do
-      table.insert(room.draw_pile, 1, top[i])
-    end
-    for i = 1, #bottom, 1 do
-      table.insert(room.draw_pile, bottom[i])
-    end
-
-    room:sendLog{
-      type = "#GuanxingResult",
-      from = player.id,
-      arg = #top,
-      arg2 = #bottom,
-    }
-
-    room:doBroadcastNotify("UpdateDrawPile", #room.draw_pile)
-  end
-
-  return { top = top, bottom = bottom }
-end
 
 --- 询问玩家选择牌和选项
 ---@param player ServerPlayer @ 要询问的玩家
