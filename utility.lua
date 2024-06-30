@@ -1409,6 +1409,12 @@ Utility.ConvertNumber = function(value, to_num)
         if i == 1 then
           ret = "1" .. ret
         end
+      elseif i == 1 then
+        local ext = value:sub(1, 6)
+        if ext == "两" then ret = 2 end
+        if table.contains({"两百", "两千"}, ext) then
+          ret = "2" .. ret
+        end
       end
     end
     ret = tonumber(ret)
