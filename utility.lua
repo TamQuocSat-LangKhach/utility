@@ -1656,6 +1656,25 @@ Utility.presentCard = function(player, target, card)
   end
 end
 
+--- 询问玩家选择X张牌和Y名角色。
+---
+--- 返回两个值，第一个是选择目标的id列表，第二个是选择牌的id列表
+---@param self Room
+---@param player ServerPlayer @ 要询问的玩家
+---@param minCardNum integer @ 选卡牌最小值
+---@param maxCardNum integer @ 选卡牌最大值
+---@param targets integer[] @ 选择目标的id范围
+---@param minTargetNum integer @ 选目标最小值
+---@param maxTargetNum integer @ 选目标最大值
+---@param pattern? string @ 选牌规则
+---@param prompt? string @ 提示信息
+---@param cancelable? boolean @ 能否点取消
+---@param no_indicate? boolean @ 是否不显示指示线
+---@return integer[], integer[]
+function Utility.askForChooseCardsAndPlayers(self, player, minCardNum, maxCardNum, targets, minTargetNum, maxTargetNum, pattern, prompt, skillName, cancelable, no_indicate)
+  print("Utility.askForChooseCardsAndPlayers is deprecated. Use Room:askForChooseCardsAndPlayers instead.")
+  return self:askForChooseCardsAndPlayers(player, minCardNum, maxCardNum, targets, minTargetNum, maxTargetNum, pattern, prompt, skillName, cancelable, no_indicate)
+end
 --从键值对表中随机取N个值（每种最多取一个）
 ---@param cardDic table @ 卡表
 ---@param num number @ 要取出的数量
