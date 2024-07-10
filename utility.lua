@@ -1175,10 +1175,12 @@ Utility.askForPlayCard = function(room, player, cards, pattern, skillName, promp
   skillName = skillName or "#askForPlayCard"
   prompt = prompt or ("##askForPlayCard:::"..skillName)
   local useables = {} -- 可用牌名
+  local useableTrues = {} -- 可用牌名
   for _, id in ipairs(Fk:getAllCardIds()) do
     local card = Fk:getCardById(id)
     if not player:prohibitUse(card) and card.skill:canUse(player, card, extra_data) then
       table.insertIfNeed(useables, card.name)
+      table.insertIfNeed(useableTrues, card.trueName)
     end
   end
   local cardIds = player:getCardIds("e")
@@ -1189,7 +1191,7 @@ Utility.askForPlayCard = function(room, player, cards, pattern, skillName, promp
     end
   end
   local strid = table.concat(cardIds, ",")
-  local useable_pattern = ".|.|.|.|" .. table.concat(useables, ",") .. "|.|" .. (strid == "" and "." or "^(" .. strid .. ")")
+  local useable_pattern = table.concat(useableTrues, ",") .. "|.|.|.|" .. table.concat(useables, ",") .. "|.|" .. (strid == "" and "." or "^(" .. strid .. ")")
   extra_data = extra_data or {}
   local use = room:askForUseCard(player, skillName, useable_pattern, prompt, true, extra_data)
   if not use then return end
