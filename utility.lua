@@ -9,7 +9,7 @@ local Utility = require 'packages/utility/_base'
 
 -- 在指定历史范围中找符合条件的事件（逆序）
 ---@param room Room
----@param eventType integer @ 要查找的事件类型
+---@param eventType GameEvent @ 要查找的事件类型
 ---@param func fun(e: GameEvent): boolean @ 过滤用的函数
 ---@param n integer @ 最多找多少个
 ---@param end_id integer @ 查询历史范围：从最后的事件开始逆序查找直到id为end_id的事件（不含）
