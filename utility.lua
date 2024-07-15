@@ -271,7 +271,9 @@ end
 ---@param cards1 integer[] @ 从属于目标1的卡牌
 ---@param cards2 integer[] @ 从属于目标2的卡牌
 ---@param skillName string @ 技能名
-Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2, skillName)
+---@param toArea integer? @ 交换牌的目标区域，默认为手牌
+Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2, skillName, toArea)
+  toArea = toArea or Card.PlayerHand
   local moveInfos = {}
   if #cards1 > 0 then
     table.insert(moveInfos, {
@@ -281,7 +283,7 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
       moveReason = fk.ReasonExchange,
       proposer = player.id,
       skillName = skillName,
-      moveVisible = false,
+      moveVisible = (toArea ~= Card.PlayerHand),  --交换蓄谋牌是否可见，待定
     })
   end
   if #cards2 > 0 then
@@ -292,7 +294,7 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
       moveReason = fk.ReasonExchange,
       proposer = player.id,
       skillName = skillName,
-      moveVisible = false,
+      moveVisible = (toArea ~= Card.PlayerHand),
     })
   end
   if #moveInfos > 0 then
@@ -301,7 +303,15 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
   moveInfos = {}
   if not targetTwo.dead then
     local to_ex_cards = table.filter(cards1, function (id)
-      return room:getCardArea(id) == Card.Processing
+      if room:getCardArea(id) == Card.Processing then
+        if toArea == Card.PlayerEquip then
+          return #targetTwo:getAvailableEquipSlots(Fk:getCardById(id).sub_type) > 0  --多个同副类别装备如何处理，待定
+        elseif toArea == Card.PlayerJudge then
+          return not table.contains(targetTwo.sealedSlots, Player.JudgeSlot)
+        else
+          return true
+        end
+      end
     end)
     if #to_ex_cards > 0 then
       table.insert(moveInfos, {
@@ -312,14 +322,20 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
         moveReason = fk.ReasonExchange,
         proposer = player.id,
         skillName = skillName,
-        moveVisible = false,
+        moveVisible = (toArea ~= Card.PlayerHand),
         visiblePlayers = targetOne.id,
       })
     end
   end
   if not targetOne.dead then
     local to_ex_cards = table.filter(cards2, function (id)
-      return room:getCardArea(id) == Card.Processing
+      if toArea == Card.PlayerEquip then
+        return #targetOne:getAvailableEquipSlots(Fk:getCardById(id).sub_type) > 0
+      elseif toArea == Card.PlayerJudge then
+        return not table.contains(targetOne.sealedSlots, Player.JudgeSlot)
+      else
+        return true
+      end
     end)
     if #to_ex_cards > 0 then
       table.insert(moveInfos, {
@@ -330,7 +346,7 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
         moveReason = fk.ReasonExchange,
         proposer = player.id,
         skillName = skillName,
-        moveVisible = false,
+        moveVisible = (toArea ~= Card.PlayerHand),
         visiblePlayers = targetTwo.id,
       })
     end
