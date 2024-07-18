@@ -249,7 +249,7 @@ end
 ---@param card Card @ 待判别的卡牌
 ---@return boolean
 Utility.isPureCard = function(card)
-  return not card:isVirtual() and card.trueName == Fk:getCardById(card.id, true).trueName
+  return not card:isVirtual() and card.name == Fk:getCardById(card.id, true).name
 end
 
 -- 判断一张虚拟牌是否有对应的实体牌（规则集定义）
