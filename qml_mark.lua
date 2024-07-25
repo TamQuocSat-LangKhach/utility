@@ -85,9 +85,9 @@ Fk:addQmlMark{
         local visual = Fk:currentRoom():getPlayerById(value.value)
         if visual then
           local ret = Fk:translate(visual.general)
-          if visual.deputyGeneral and visual.deputyGeneral ~= "" then
-            ret = ret .. "/" .. Fk:translate(visual.deputyGeneral)
-          end
+          -- if visual.deputyGeneral and visual.deputyGeneral ~= "" then
+          --   ret = ret .. "/" .. Fk:translate(visual.deputyGeneral)
+          -- end
           return ret
         end
       end
