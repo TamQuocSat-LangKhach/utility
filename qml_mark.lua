@@ -71,3 +71,28 @@ Fk:addQmlMark{
   end,
   qml_path = "packages/utility/qml/DetailBox"
 }
+
+--先辅mark
+--作为table只有两个参数：
+--具体值（value，若为数字，默认为武将id），和是否对其他人可见（visible）
+Fk:addQmlMark{
+  name = "xianfu",
+  qml_path = "",
+  how_to_show = function(name, value, p)
+    if type(value) ~= "table" then return " " end
+    if (value.visible or Self == p) then
+      if type(value.value) == "number" then
+        local visual = Fk:currentRoom():getPlayerById(value.value)
+        if visual then
+          local ret = Fk:translate(visual.general)
+          if visual.deputyGeneral and visual.deputyGeneral ~= "" then
+            ret = ret .. "/" .. Fk:translate(visual.deputyGeneral)
+          end
+          return ret
+        end
+      end
+      return tostring(value.value)
+    end
+    return " "
+  end,
+}

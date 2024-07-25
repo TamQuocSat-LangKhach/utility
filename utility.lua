@@ -598,6 +598,43 @@ Utility.showPrivateMark = function(player, name)
   end
 end
 
+-- 获取角色对应先辅Mark的实际值
+---@param player Player @ 要被获取标记的那个玩家
+---@param name string @ 标记名称（不带前缀）
+---@return any
+Utility.getXianfuMark = function(player, name)
+  return type(player:getMark("@[xianfu]" .. name)) == "table" and player:getMark("@[xianfu]" .. name).value or 0
+end
+
+-- 设置角色对应私人Mark
+---@param player ServerPlayer @ 要被获取标记的那个玩家
+---@param name string @ 标记名称（不带前缀）
+---@param value any @ 标记实际值
+---@param visible? bool @ 是否公开标记
+Utility.setXianfuMark = function(player, name, value, visible)
+  local mark = player:getMark("@[xianfu]" .. name)
+  if value == nil or value == 0 then
+    player.room:setPlayerMark(player, "@[xianfu]" .. name, 0)
+  else
+    if type(mark) ~= "table" then mark = {} end
+    mark.visible = visible
+    mark.value = value
+    player.room:setPlayerMark(player, "@[xianfu]" .. name, mark)
+  end
+end
+
+--让一名角色的先辅mark对所有角色都可见
+---@param player ServerPlayer @ 要公开标记的角色
+---@param name? string @ 要公开的标记名（不含前缀）
+Utility.showXianfuMark = function(player, name)
+  local room = player.room
+  local mark = player:getMark("@[xianfu]" .. name)
+  if type(mark) == "table" then
+    mark.visible = true
+    room:setPlayerMark(player, "@[xianfu]" .. name, mark)
+  end
+end
+
 --- 判断一张牌能否移动至某角色的装备区
 ---@param target Player @ 接受牌的角色
 ---@param cardId integer @ 移动的牌
