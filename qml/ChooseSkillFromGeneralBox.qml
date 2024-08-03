@@ -1,0 +1,174 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
+import Fk
+import Fk.Pages
+import Fk.RoomElement
+
+GraphicsBox {
+  id: root
+
+  property var selectedGeneral: []
+  property var generals: ["liubei"]
+  property var skillList: []
+  property var shownSkills: []
+  property var selectedSkill: []
+
+  property string titleName: ""
+
+  title.text: luatr(titleName)
+  width: 580
+  height: 220 + Math.min(2, Math.ceil(generals.length / 7)) * 110
+
+
+  GridView {
+    id : generalArea
+    width : parent.width
+    height : 50 + Math.min(2, Math.ceil(generals.length / 7)) * 110
+    anchors.top: title.bottom
+    anchors.topMargin: 0
+    anchors.horizontalCenter: parent.horizontalCenter
+    cellWidth: 80
+    cellHeight: 110
+    Layout.alignment: Qt.AlignHCenter
+    clip: true
+
+    model: generals
+
+    delegate: GeneralCardItem {
+      id: cardItem
+      autoBack: false
+      name: modelData
+      scale : 0.8
+
+      Image {
+        id : generalChosen
+        visible: (selectedGeneral.length && selectedGeneral[0] == modelData)
+        source: SkinBank.CARD_DIR + "chosen"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 8
+        scale: 1.2
+      }
+
+      onSelectedChanged: {
+        if (selectedGeneral.length && selectedGeneral[0] !== modelData) {
+          selectedSkill = [];
+        }
+        selectedGeneral = [modelData];
+        shownSkills = skillList[index];
+        updateSelectable();
+      }
+
+      onRightClicked: {
+        roomScene.startCheat("GeneralDetail", { generals: [modelData] });
+      }
+
+    }
+  }
+
+  GridView {
+    id : skillArea
+    width : generalArea.width
+    height : 90
+    anchors.top: generalArea.bottom
+    anchors.topMargin: 10
+    anchors.horizontalCenter: parent.horizontalCenter
+    cellWidth: 80
+    cellHeight: 40
+    Layout.alignment: Qt.AlignHCenter
+    clip: true
+
+    model: shownSkills
+
+    delegate: SkillButton {
+      id : skill_buttons
+      skill: luatr(modelData)
+      type: "active"
+      enabled: true
+      orig: modelData
+      scale: 0.9
+
+      onPressedChanged: {
+        if (pressed) {
+          if (selectedSkill.length){
+            root.selectedSkill[0].pressed = false;
+          }
+          selectedSkill = [this];
+        } else {
+          selectedSkill = [];
+          this.pressed = false;
+        }
+        updateSelectable();
+      }
+    }
+
+
+  }
+
+
+  Item {
+    id: buttonArea
+    anchors.fill: parent
+    anchors.bottomMargin: 10
+    height: 40
+
+    Row {
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.bottom: parent.bottom
+      spacing: 30
+
+      MetroButton {
+        Layout.fillWidth: true
+        text: luatr("OK")
+        id: buttonConfirm
+        enabled: selectedGeneral.length && selectedSkill.length
+
+        onClicked: {
+          close();
+          roomScene.state = "notactive";
+          ClientInstance.replyToServer("", JSON.stringify([root.selectedGeneral[0], root.selectedSkill[0].orig]));
+        }
+      }
+
+      MetroButton {
+        id: buttonDetail
+        enabled: selectedGeneral.length
+        text: luatr("Show General Detail")
+        onClicked: {
+          if (selectedSkill.length) {
+            roomScene.startCheat("../../packages/utility/qml/SkillDetail", { skills: [root.selectedSkill[0].orig] });
+          } else {
+            roomScene.startCheat("GeneralDetail", { generals: selectedGeneral });
+          }
+        }
+      }
+
+
+      MetroButton {
+        Layout.fillWidth: true
+        text: luatr("Cancel")
+        enabled: true
+
+        onClicked: {
+          root.close();
+          roomScene.state = "notactive";
+          ClientInstance.replyToServer("", "");
+        }
+      }
+    }
+  }
+
+  function updateSelectable() {
+    buttonConfirm.enabled = selectedSkill.length;
+    buttonDetail.enabled = selectedGeneral.length;
+  }
+
+  function loadData(data) {
+    generals = data[0];
+    skillList = data[1];
+    titleName = data[2];
+  }
+}
