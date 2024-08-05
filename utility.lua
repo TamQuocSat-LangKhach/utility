@@ -2295,6 +2295,47 @@ end
 
 
 
+--- 询问选择若干个牌名
+---@param room Room
+---@param player ServerPlayer @ 询问角色
+---@param names table<string> @ 可选牌名
+---@param minNum integer @ 最小值
+---@param maxNum integer @ 最大值
+---@param skillName? string @ 技能名
+---@param prompt? string @ 提示信息
+---@param all_names? table<string> @ 所有显示的牌名
+---@param cancelable? boolean @ 是否可以取消，默认不可
+---@param repeatable? boolean @ 是否可以选择重复的牌名，默认不可
+---@return table<string> @ 选择的牌名
+Utility.askForChooseCardNames = function (room, player, names, minNum, maxNum, skillName, prompt, all_names, cancelable, repeatable)
+  local choices = {}
+  skillName = skillName or ""
+  prompt = prompt or skillName
+  if (cancelable == nil) then cancelable = false end
+  if (repeatable == nil) then repeatable = false end
+  all_names = all_names or names
+  local result = room:askForCustomDialog(
+    player, skillName or "",
+    "packages/utility/qml/ChooseCardNamesBox.qml",
+    { names, minNum, maxNum, prompt, all_names, cancelable, repeatable }
+  )
+  if result ~= "" then
+    choices = json.decode(result)
+  elseif not cancelable then
+    choices = table.random(names, minNum)
+    if #choices < minNum and repeatable then
+      for i = 1, minNum - #choices do
+        table.insert(choices, names[1])
+      end
+    end
+  end
+  return choices
+end
+Fk:loadTranslationTable{
+  ["Clear All"] = "清空",
+}
+
+
 
 dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'
