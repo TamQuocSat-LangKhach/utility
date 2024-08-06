@@ -2321,7 +2321,7 @@ Utility.askForChooseCardNames = function (room, player, names, minNum, maxNum, s
   )
   if result ~= "" then
     choices = json.decode(result)
-  elseif not cancelable then
+  elseif not cancelable and minNum > 0 then
     choices = table.random(names, minNum)
     if #choices < minNum and repeatable then
       for i = 1, minNum - #choices do
@@ -2335,7 +2335,50 @@ Fk:loadTranslationTable{
   ["Clear All"] = "清空",
 }
 
-
+--- 按组展示牌，并询问选择若干个牌组（用于清正等）
+---@param room Room
+---@param player ServerPlayer @ 询问角色
+---@param listNames table<string> @ 牌组名的表
+---@param listCards table<table<integer>> @ 牌组所含id表的表
+---@param minNum integer @ 最小值
+---@param maxNum integer @ 最大值
+---@param skillName? string @ 技能名
+---@param prompt? string @ 提示信息
+---@param allowEmpty? boolean @ 是否可以选择空的牌组，默认不可
+---@param cancelable? boolean @ 是否可以取消，默认可
+---@return table<string> @ 返回选择的牌组的组名列表
+Utility.askForChooseCardList = function (room, player, listNames, listCards, minNum, maxNum, skillName, prompt, allowEmpty, cancelable)
+  local choices = {}
+  skillName = skillName or ""
+  prompt = prompt or skillName
+  if (allowEmpty == nil) then allowEmpty = false end
+  if (cancelable == nil) then cancelable = true end
+  local availableList = table.simpleClone(listNames)
+  if not allowEmpty then
+    for i = #listCards, 1, -1 do
+      if #listCards[i] == 0 then
+        table.remove(availableList, i)
+      end
+    end
+  end
+  -- set 'cancelable' to 'true' when the count of cardlist is out of range
+  if not cancelable and #availableList < minNum then
+    cancelable = true
+  end
+  local result = room:askForCustomDialog(
+    player, skillName,
+    "packages/utility/qml/ChooseCardListBox.qml",
+    { listNames, listCards, minNum, maxNum, prompt, allowEmpty, cancelable }
+  )
+  if result ~= "" then
+    choices = json.decode(result)
+  elseif not cancelable and minNum > 0 then
+    if #availableList > 0 then
+      choices = table.random(availableList, minNum)
+    end
+  end
+  return choices
+end
 
 dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'

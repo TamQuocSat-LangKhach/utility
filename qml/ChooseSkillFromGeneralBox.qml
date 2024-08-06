@@ -33,7 +33,7 @@ GraphicsBox {
     border.color: "#FEF7D6"
     border.width: 3
     radius : 4
-    color: "transparent"
+    color: "#88EEEEEE"
 
     GridView {
       id : generalCard
@@ -92,7 +92,7 @@ GraphicsBox {
     border.color: "#FEF7D6"
     border.width: 3
     radius : 4
-    color: "transparent"
+    color: "#88EEEEEE"
 
     GridView {
       id : skillShown
