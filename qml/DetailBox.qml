@@ -23,7 +23,7 @@ ColumnLayout {
     clip: true
     spacing: 20
 
-    model: extra_data.data
+    model: extra_data.data.value ? extra_data.data.value : extra_data.data
 
     delegate: TextEdit {
       id: skillDesc

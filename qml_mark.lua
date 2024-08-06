@@ -36,20 +36,22 @@ Fk:addQmlMark{
 Fk:addQmlMark{
   name = "private",
   qml_path = function(name, value, p)
-    if (value.players == nil and Self == p) or (value.players and table.contains(value.players, p.id)) then
+    if (value.players == nil and Self == p) or (value.players and table.contains(value.players, Self.id)) then
       if string.startsWith(name, "@[private]$") then
         return "packages/utility/qml/ViewPile"
       elseif string.startsWith(name, "@[private]&") then
         return "packages/utility/qml/ViewGeneralPile"
+      elseif string.startsWith(name, "@[private]:") then
+        return "packages/utility/qml/DetailBox"
       end
     end
     return ""
   end,
   how_to_show = function(name, value, p)
     if type(value) ~= "table" then return " " end
-    if string.startsWith(name, "@[private]$") or string.startsWith(name, "@[private]&") then
+    if string.startsWith(name, "@[private]$") or string.startsWith(name, "@[private]&") or string.startsWith(name, "@[private]:") then
       return tostring(#value.value)
-    elseif (value.players == nil and Self == p) or (value.players and table.contains(value.players, p.id)) then
+    elseif (value.players == nil and Self == p) or (value.players and table.contains(value.players, Self.id)) then
       return table.concat(table.map(value.value, function(_value)
         return Fk:translate(_value)
       end), " ")

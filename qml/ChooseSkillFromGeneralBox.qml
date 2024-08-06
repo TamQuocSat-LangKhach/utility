@@ -19,92 +19,126 @@ GraphicsBox {
   property string titleName: ""
 
   title.text: luatr(titleName)
-  width: 580
-  height: 220 + Math.min(2, Math.ceil(generals.length / 7)) * 110
+  width: 585
+  height: 210 + Math.min(270, Math.ceil(generals.length / 7) * 110)
 
-
-  GridView {
+  Rectangle {
     id : generalArea
-    width : parent.width
-    height : 50 + Math.min(2, Math.ceil(generals.length / 7)) * 110
+    width : parent.width 
+    height : parent.height - 180
     anchors.top: title.bottom
-    anchors.topMargin: 0
+    anchors.topMargin: 10
     anchors.horizontalCenter: parent.horizontalCenter
-    cellWidth: 80
-    cellHeight: 110
-    Layout.alignment: Qt.AlignHCenter
-    clip: true
+    clip : true
+    border.color: "#FEF7D6"
+    border.width: 3
+    radius : 4
+    color: "transparent"
 
-    model: generals
+    GridView {
+      id : generalCard
+      
+      anchors.centerIn: parent
+      width : parent.width - 10
+      height : parent.height - 14
+      cellWidth: 80
+      cellHeight: 110
+      Layout.alignment: Qt.AlignHCenter
+      clip: true
 
-    delegate: GeneralCardItem {
-      id: cardItem
-      autoBack: false
-      name: modelData
-      scale : 0.8
+      model: generals
 
-      Image {
-        id : generalChosen
-        visible: (selectedGeneral.length && selectedGeneral[0] == modelData)
-        source: SkinBank.CARD_DIR + "chosen"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 8
-        scale: 1.2
-      }
+      delegate: GeneralCardItem {
+        id: cardItem
+        autoBack: false
+        name: modelData
+        scale : 0.8
 
-      onSelectedChanged: {
-        if (selectedGeneral.length && selectedGeneral[0] !== modelData) {
-          selectedSkill = [];
+        Image {
+          id : generalChosen
+          visible: (selectedGeneral.length && selectedGeneral[0] == modelData)
+          source: SkinBank.CARD_DIR + "chosen"
+          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.bottom: parent.bottom
+          anchors.bottomMargin: 8
+          scale: 1.2
         }
-        selectedGeneral = [modelData];
-        shownSkills = skillList[index];
-        updateSelectable();
-      }
 
-      onRightClicked: {
-        roomScene.startCheat("GeneralDetail", { generals: [modelData] });
-      }
+        onSelectedChanged: {
+          if (selectedGeneral.length && selectedGeneral[0] !== modelData) {
+            selectedSkill = [];
+          }
+          selectedGeneral = [modelData];
+          shownSkills = skillList[index];
+          updateSelectable();
+        }
 
+        onRightClicked: {
+          roomScene.startCheat("GeneralDetail", { generals: [modelData] });
+        }
+
+      }
     }
   }
 
-  GridView {
+  Rectangle {
     id : skillArea
-    width : generalArea.width
+    width : parent.width
     height : 90
     anchors.top: generalArea.bottom
-    anchors.topMargin: 10
+    anchors.topMargin: 5
     anchors.horizontalCenter: parent.horizontalCenter
-    cellWidth: 80
-    cellHeight: 40
-    Layout.alignment: Qt.AlignHCenter
-    clip: true
+    clip : true
+    border.color: "#FEF7D6"
+    border.width: 3
+    radius : 4
+    color: "transparent"
 
-    model: shownSkills
+    GridView {
+      id : skillShown
+      width : parent.width - 10
+      height : parent.height - 8
+      anchors.centerIn: parent
+      cellWidth: 80
+      cellHeight: 40
+      Layout.alignment: Qt.AlignHCenter
+      clip: true
 
-    delegate: SkillButton {
-      id : skill_buttons
-      skill: luatr(modelData)
-      type: "active"
-      enabled: true
-      orig: modelData
-      scale: 0.9
+      model: shownSkills
 
-      onPressedChanged: {
-        if (pressed) {
-          if (selectedSkill.length){
-            root.selectedSkill[0].pressed = false;
+      delegate: SkillButton {
+        id : skill_buttons
+        skill: luatr(modelData)
+        type: "active"
+        enabled: true
+        orig: modelData
+        scale: 0.85
+
+        onPressedChanged: {
+          if (pressed) {
+            if (selectedSkill.length) {
+              root.selectedSkill[0].pressed = false;
+            }
+            selectedSkill = [this];
+          } else {
+            selectedSkill = [];
+            this.pressed = false;
           }
-          selectedSkill = [this];
-        } else {
-          selectedSkill = [];
-          this.pressed = false;
+          updateSelectable();
         }
-        updateSelectable();
+
+        /* default choose first skill
+        Component.onCompleted: {
+          if (selectedSkill.length == 0 && shownSkills.length == 1) {
+            this.pressed = true;
+            selectedSkill = [this];
+            updateSelectable();
+          }
+        }
+        */
+
       }
     }
-
 
   }
 
