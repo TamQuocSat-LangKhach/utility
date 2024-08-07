@@ -2335,6 +2335,18 @@ Fk:loadTranslationTable{
   ["Clear All"] = "清空",
 }
 
+-- 用于选牌名的 interaction type ，和UI.ComboBox差不多，照着用就行
+-- 必输参数：可选牌名choices；可输参数：全部牌名all_choices
+Utility.CardNameBox = function(spec)
+  spec.choices = type(spec.choices) == "table" and spec.choices or Util.DummyTable
+  spec.all_choices = type(spec.all_choices) == "table" and spec.all_choices or spec.choices
+  spec.default_choice = spec.choices[1]
+  spec.type = "custom"
+  spec.qml_path = "packages/utility/qml/SkillCardName"
+  return spec
+end
+
+
 --- 按组展示牌，并询问选择若干个牌组（用于清正等）
 ---@param room Room
 ---@param player ServerPlayer @ 询问角色
