@@ -47,22 +47,39 @@ GraphicsBox {
         id: cardAreaRepeater
         model: listCards
 
-        delegate: Rectangle {
+        delegate: Item {
           id: listArea
           width : 280
           height : 150
           clip : true
-          border.color: "#FEF7D6"
-          border.width: 3
-          radius : 3
-          color: "#88EEEEEE"
+          // border.color: "#FEF7D6"
+          // border.width: 3
+          // radius : 3
+          // color: "#88EEEEEE"
 
           property string listName : listNames[index]
           property bool chosen : selectedItem.includes(listName)
           property int cardNum : modelData.length
+          Rectangle {
+            id: areaRect
+            anchors.centerIn: parent
+            width: parent.width
+            height: parent.height
+            color: "#EEEEEE"
+            opacity: .53
+          }
+
+          GoodInnerShadow {
+            visible: chosen
+            source: areaRect
+            color: "gold"
+            spread: .3
+            radius: 32
+            opacity: .53
+          }
 
           RowLayout {
-            id : cardArea
+            id : cardAreaRect
             width : parent.width - 20
             height : parent.height - 20
             anchors.centerIn: parent
@@ -125,16 +142,16 @@ GraphicsBox {
               anchors.centerIn: parent
             }
 
-            Image {
-              id : generalChosen
-              visible: chosen
-              source: SkinBank.CARD_DIR + "chosen"
-              anchors.bottom: parent.bottom
-              anchors.right: parent.right
-              anchors.bottomMargin : 5
-              anchors.rightMargin : 5
-              scale : 0.95
-            }
+            // Image {
+            //   id : generalChosen
+            //   visible: chosen
+            //   source: SkinBank.CARD_DIR + "chosen"
+            //   anchors.bottom: parent.bottom
+            //   anchors.right: parent.right
+            //   anchors.bottomMargin : 5
+            //   anchors.rightMargin : 5
+            //   scale : 0.95
+            // }
           }
 
         }
