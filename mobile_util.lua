@@ -16,7 +16,7 @@ Utility.skillCharged = function(player, num, max)
   local new_num = math.min(max_num, math.max(0, player:getMark("skill_charge") + num))
   room:setPlayerMark(player, "skill_charge_max", max_num)
   room:setPlayerMark(player, "skill_charge", new_num)
-  room:setPlayerMark(player, "@skill_charge", (max_num == 0 and num == 0) and 0 or (new_num.."/"..max_num))
+  room:setPlayerMark(player, "@skill_charge", (max_num == 0 and new_num == 0) and 0 or (new_num.."/"..max_num))
 end
 Fk:loadTranslationTable{
   ["@skill_charge"] = "蓄力",
