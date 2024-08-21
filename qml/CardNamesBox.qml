@@ -18,26 +18,32 @@ GraphicsBox {
 
 
   title.text: Util.processPrompt(prompt)
-  width: 600
+  width: 610 // 600
   property int mainHeight : Math.min(300, 40 * (Math.ceil(all_names.length / 7)))
   height: mainHeight + 40
 
 
   Flickable {
     id : cardArea
-    height : mainHeight
-    anchors.top: title.bottom
-    anchors.topMargin: 5
-    anchors.left : parent.left
+    // height : mainHeight
+    // anchors.top: title.bottom
+    // anchors.topMargin: 5
+    // // anchors.left : parent.left
+    // anchors.leftMargin: 5
+    // anchors.rightMargin: 5
+    // anchors.horizontalCenter: parent.horizontalCenter
+    anchors.topMargin: 30
     anchors.leftMargin: 5
-    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.rightMargin: 5
+    anchors.fill: parent
     contentHeight: gridLayout.implicitHeight
     clip: true
 
     GridLayout {
       id: gridLayout
       columns: 7
-      width: parent.width
+      // width: parent.width
+      anchors.fill: parent
       clip: true
 
       Repeater {
@@ -71,11 +77,12 @@ GraphicsBox {
             clip : true
             Image {
               id: cardImage
-              anchors.fill: parent
+              // anchors.fill: parent
               anchors.centerIn: parent
-              anchors.topMargin: -20
+              // anchors.topMargin: -20
               source: SkinBank.getCardPicture(modelData)
-              fillMode: Image.PreserveAspectCrop
+              // fillMode: Image.PreserveAspectCrop
+              sourceClipRect: Qt.rect(6, 53, parent.width, parent.height)
               scale : 1.05
             }
           }
