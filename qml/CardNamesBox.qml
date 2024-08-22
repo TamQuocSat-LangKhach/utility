@@ -42,8 +42,8 @@ GraphicsBox {
     GridLayout {
       id: gridLayout
       columns: 7
-      // width: parent.width
-      anchors.fill: parent
+      width: parent.width * Math.min(7,all_names.length) / 7
+      // anchors.fill: parent
       clip: true
 
       Repeater {
