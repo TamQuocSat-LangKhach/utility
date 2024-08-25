@@ -1326,7 +1326,6 @@ Utility.GetEnemies = function(room, player, include_dead)
       enemies = table.filter(players, function(p) return p.role ~= player.role end)
     end
   elseif table.contains({"m_1v2_mode", "brawl_mode", "m_2v2_mode", "jiange_mode"}, room.settings.gameMode) then
-    dbg()
     enemies = table.filter(players, function(p) return p.role ~= player.role end)
   elseif table.contains({"m_1v1_mode"}, room.settings.gameMode) then
     enemies = {player:getNextAlive(true)}
