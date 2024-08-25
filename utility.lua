@@ -1288,13 +1288,13 @@ Utility.GetFriends = function(room, player, include_self, include_dead)
   end
   local players = include_dead and room.players or room.alive_players
   local friends = {player}
-  if table.contains({"aaa_role_mode", "aab_role_mode", "vanished_dragon", "zombie_mode"}, room.settings.gameMode) then
+  if table.contains({"aaa_role_mode", "aab_role_mode", "vanished_dragon", "zombie_mode", "kangqin"}, room.settings.gameMode) then
     if player.role == "lord" or player.role == "loyalist" then
       friends = table.filter(players, function(p) return p.role == "lord" or p.role == "loyalist" end)
     else
       friends = table.filter(players, function(p) return p.role == player.role end)
     end
-  elseif table.contains({"m_1v2_mode", "brawl_mode", "m_2v2_mode"}, room.settings.gameMode) then
+  elseif table.contains({"m_1v2_mode", "brawl_mode", "m_2v2_mode", "jiange"}, room.settings.gameMode) then
     friends = table.filter(players, function(p) return p.role == player.role end)
   elseif table.contains({"nos_heg_mode", "new_heg_mode"}, room.settings.gameMode) then
     if player.role == "wild" or player.kingdom == "unknown" then
@@ -1319,13 +1319,13 @@ end
 Utility.GetEnemies = function(room, player, include_dead)
   local players = include_dead and room.players or room.alive_players
   local enemies = {}
-  if table.contains({"aaa_role_mode", "vanished_dragon", "zombie_mode"}, room.settings.gameMode) then
+  if table.contains({"aaa_role_mode", "vanished_dragon", "zombie_mode", "kangqin"}, room.settings.gameMode) then
     if player.role == "lord" or player.role == "loyalist" then
       enemies = table.filter(players, function(p) return p.role ~= "lord" and p.role ~= "loyalist" end)
     else
       enemies = table.filter(players, function(p) return p.role ~= player.role end)
     end
-  elseif table.contains({"m_1v2_mode", "brawl_mode", "m_2v2_mode"}, room.settings.gameMode) then
+  elseif table.contains({"m_1v2_mode", "brawl_mode", "m_2v2_mode", "jiange"}, room.settings.gameMode) then
     enemies = table.filter(players, function(p) return p.role ~= player.role end)
   elseif table.contains({"m_1v1_mode"}, room.settings.gameMode) then
     enemies = {player:getNextAlive(true)}
