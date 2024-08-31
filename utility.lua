@@ -2013,7 +2013,7 @@ Fk:loadTranslationTable{
   ["#ShowDiscussionResult"] = "%from 的议事结果为 %arg",
 }
 
---- PindianStruct 拼点的数据
+--- JointPindianStruct 共同拼点的数据
 ---@class JointPindianStruct
 ---@field public from ServerPlayer @ 拼点发起者
 ---@field public tos ServerPlayer[] @ 拼点目标
