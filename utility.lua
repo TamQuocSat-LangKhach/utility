@@ -2013,6 +2013,15 @@ Fk:loadTranslationTable{
   ["#ShowDiscussionResult"] = "%from 的议事结果为 %arg",
 }
 
+--- PindianStruct 拼点的数据
+---@class JointPindianStruct
+---@field public from ServerPlayer @ 拼点发起者
+---@field public tos ServerPlayer[] @ 拼点目标
+---@field public fromCard Card @ 拼点发起者拼点牌
+---@field public results table<integer, PindianResult> @ 结果
+---@field public winner ServerPlayer @ 拼点胜利者
+---@field public reason string @ 拼点原因
+
 Utility.JointPindianEvent = "GameEvent.JointPindian"
 
 Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
@@ -2211,7 +2220,7 @@ Fk:loadTranslationTable{
 ---@param tos ServerPlayer[]
 ---@param skillName string
 ---@param initialCard? Card
----@return PindianStruct
+---@return JointPindianStruct
 Utility.jointPindian = function(player, tos, skillName, initialCard)
   local pindianData = { from = player, tos = tos, reason = skillName, fromCard = initialCard, results = {}, winner = nil }
   local event = GameEvent:new(Utility.JointPindianEvent, pindianData)
