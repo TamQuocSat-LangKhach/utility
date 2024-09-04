@@ -1170,6 +1170,15 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   extra_data.optional_cards = cardIds
   extra_data.skillName = skillName
   if #cardIds == 0 and not cancelable then return end
+  -- 记录不属于自己的牌的所有者，用于与锁视技能互动
+  local ownerMap = {}
+  for _, id in ipairs(cardIds) do
+    local ownerId = room.owner_map[id]
+    if ownerId ~= nil and ownerId ~= player.id then
+      ownerMap[tostring(id)] = ownerId
+    end
+  end
+  room:setPlayerMark(player, "realcard_vs_owners", ownerMap)
   local _, dat = room:askForUseViewAsSkill(player, "realcard_viewas", prompt, cancelable, extra_data)
   if (not cancelable) and (not dat) then
     for _, cid in ipairs(cardIds) do
@@ -1200,7 +1209,13 @@ local realcard_viewas = fk.CreateViewAsSkill{
   end,
   view_as = function(self, cards)
     if #cards == 1 then
-      return Fk:getCardById(cards[1])
+      local cid = cards[1]
+      local mark = Self:getTableMark("realcard_vs_owners")
+      if mark[tostring(cid)] then
+        local owner = Fk:currentRoom():getPlayerById(mark[tostring(cid)])
+        Fk:filterCard(cid, owner)
+      end
+      return Fk:getCardById(cid)
     end
   end,
 }
