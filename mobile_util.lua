@@ -88,7 +88,10 @@ Fk:loadTranslationTable{
 ---@param room Room @ 房间
 ---@return integer[]
 Utility.GetRenPile = function(room)
-  room.tag["ren"] = room.tag["ren"] or {}
+  local cards = room.tag["ren"] or {}
+  room.tag["ren"] = table.filter(cards, function (id)
+    return room:getCardArea(id) == Card.Void
+  end)
   return table.simpleClone(room.tag["ren"])
 end
 
@@ -150,7 +153,6 @@ Utility.AddToRenPile = function(room, card, skillName, proposer)
       moveVisible = true,
     }
     table.insert(moveInfos, info)
-    room.logic:trigger("fk.BeforeRenMove", nil, info)
     room:sendLog{
       type = "#OverflowFromRenPile",
       arg = #remove,
@@ -159,80 +161,7 @@ Utility.AddToRenPile = function(room, card, skillName, proposer)
   end
   if #moveInfos > 0 then
     room:moveCards(table.unpack(moveInfos))
-    for _, info in ipairs(moveInfos) do
-      if info.skillName == "ren_overflow" then
-        room.logic:trigger("fk.AfterRenMove", nil, info)
-      end
-    end
   end
-
-  Utility.NotifyRenPile(room)
-end
-
----@param room Room @ 房间
----@param player ServerPlayer @ 获得牌的角色
----@param cid integer | integer[] | Card | Card[] @ 要获得的牌
----@param skillName string @ 技能名
-Utility.GetCardFromRenPile = function(room, player, cid, skillName)
-  skillName = skillName or ""
-  cid = Card:getIdList(cid)
-  if #cid == 0 then return end
-  local move = {
-    ids = cid,
-    to = player.id,
-    toArea = Card.PlayerHand,
-    moveReason = fk.ReasonJustMove,
-    proposer = player.id,
-    moveVisible = true,
-    skillName = skillName,
-  }
-  room.logic:trigger("fk.BeforeRenMove", nil, move)
-  room:moveCards(move)
-  room.logic:trigger("fk.AfterRenMove", nil, move)
-  for _, id in ipairs(cid) do
-    table.removeOne(room.tag["ren"], id)
-  end
-  room:sendLog{
-    type = "#GetCardFromRenPile",
-    from = player.id,
-    arg = #cid,
-    card = cid,
-  }
-  Utility.NotifyRenPile(room)
-end
-
----@param room Room @ 房间
----@param player ServerPlayer @ 弃置牌的角色
----@param ids integer|integer[] @ 要弃置的id/idList
----@param skillName string @ 技能名
-Utility.DiscardCardFromRenPile = function(room, player, ids, skillName)
-  skillName = skillName or ""
-  if type(ids) ~= "number" then
-    ids = ids
-  else
-    ids = {ids}
-  end
-  if #ids == 0 then return end
-  local move = {
-    ids = ids,
-    toArea = Card.DiscardPile,
-    moveReason = fk.ReasonDiscard,
-    proposer = player.id,
-    moveVisible = true,
-    skillName = skillName,
-  }
-  room.logic:trigger("fk.BeforeRenMove", nil, move)
-  room:moveCards(move)
-  room.logic:trigger("fk.AfterRenMove", nil, move)
-  for _, id in ipairs(ids) do
-    table.removeOne(room.tag["ren"], id)
-  end
-  room:sendLog{
-    type = "#DiscardCardFromRenPile",
-    from = player.id,
-    arg = #ids,
-    card = ids,
-  }
   Utility.NotifyRenPile(room)
 end
 
@@ -240,13 +169,44 @@ Fk:loadTranslationTable{
   ["#NotifyRenPile"] = "“仁”区现有 %arg 张牌 %card",
   ["#AddToRenPile"] = "%arg 张牌被移入“仁”区 %card",
   ["#OverflowFromRenPile"] = "%arg 张牌从“仁”区溢出 %card",
-  ["#GetCardFromRenPile"] = "%from 从“仁”区获得 %arg 张牌 %card",
-  ["#DiscardCardFromRenPile"] = "%from 弃置了“仁”区 %arg 张牌 %card",
   ["$RenPile"] = "仁区",
   ["@$RenPile"] = "仁区",
 }
 
+local AfterRenMove = fk.CreateTriggerSkill{
+  name = "#AfterRenMove",
+  global = true,
+  priority = 0.001,
 
+  refresh_events = {fk.AfterCardsMove},
+  can_refresh = function(self, event, target, player, data)
+    if player.seat == 1 and player.room.tag["ren"] then
+      for _, move in ipairs(data) do
+        if move.toArea ~= Card.Void then
+          for _, info in ipairs(move.moveInfo) do
+            if table.contains(player.room.tag["ren"], info.cardId) then
+              return true
+            end
+          end
+        end
+      end
+    end
+  end,
+  on_refresh = function(self, event, target, player, data)
+    local room = player.room
+    for _, move in ipairs(data) do
+      if move.toArea ~= Card.Void then
+        for _, info in ipairs(move.moveInfo) do
+          if table.contains(room.tag["ren"], info.cardId) then
+            Utility.NotifyRenPile(room)
+            room.logic:trigger("fk.AfterRenMove", nil, info)
+          end
+        end
+      end
+    end
+  end,
+}
+Fk:addSkill(AfterRenMove)
 
 
 
