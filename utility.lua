@@ -790,6 +790,100 @@ Utility.askforViewCardsAndChoice = function(player, cards, choices, skillname, p
   return result
 end
 
+
+--- 类似于askForCardsChosen，适用于“选择每个区域各一张牌”
+---@param chooser ServerPlayer @ 要被询问的人
+---@param target ServerPlayer @ 被选牌的人
+---@param flag any @ 用"hej"三个字母的组合表示能选择哪些区域, h - 手牌区, e - 装备区, j - 判定区
+---@param skill_name? string @ 技能名（暂时没用的参数，poxi没提供接口）
+---@param prompt? string @ 提示信息（暂时没用的参数，poxi没提供接口）
+---@param disable_ids? integer[] @ 不允许选的牌
+---@param cancelable? boolean @ 是否可以点取消，默认是
+---@return integer[] @ 选择的id
+Utility.askforCardsChosenFromAreas = function(chooser, target, flag, skill_name, prompt, disable_ids, cancelable)
+  cancelable = (cancelable == nil) and true or cancelable
+  disable_ids = disable_ids or {}
+  local card_data = {}
+  if type(flag) ~= "string" then
+    flag = "hej"
+  end
+  if string.find(flag, "h") and target:getHandcardNum() > 0 then
+    local handcards = {}
+    if chooser:isBuddy(target) then
+      handcards = target:getCardIds("h")
+    else
+      local n = #table.filter(target:getCardIds("h"), function (id)
+        return not table.contains(disable_ids, id)
+      end)
+      if n > 0 then
+        for i = 1, n, 1 do
+          table.insert(handcards, -1)
+        end
+      end
+    end
+    local cards = table.filter(handcards, function (id)
+      return not table.contains(disable_ids, id)
+    end)
+    if #cards > 0 then
+      table.insert(card_data, {"$Hand", cards})
+    end
+  end
+  if string.find(flag, "e") and #target:getCardIds("e") > 0 then
+    local cards = table.filter(target:getCardIds("e"), function (id)
+      return not table.contains(disable_ids, id)
+    end)
+    if #cards > 0 then
+      table.insert(card_data, {"$Equip", cards})
+    end
+  end
+  if string.find(flag, "j") and #target:getCardIds("j") > 0 then
+    local cards = table.filter(target:getCardIds("j"), function (id)
+      return not table.contains(disable_ids, id)
+    end)
+    if #cards > 0 then
+      table.insert(card_data, {"$Judge", cards})
+    end
+  end
+  if #card_data == 0 then return {} end
+  local ret = chooser.room:askForPoxi(chooser, "askforCardsChosenFromAreas", card_data, nil, cancelable)
+  local result = table.filter(ret, function(id) return id ~= -1 end)
+  local hand_num = #ret - #result
+  if hand_num > 0 then
+    table.insertTable(result, table.random(target:getCardIds("h"), hand_num))
+  end
+  return result
+end
+
+Fk:addPoxiMethod{
+  name = "askforCardsChosenFromAreas",
+  prompt = "#askforCardsChosenFromAreas",
+  card_filter = Util.TrueFunc,
+  feasible = function(selected, data)
+    if data and #data == #selected then
+      local areas = {}
+      for _, id in ipairs(selected) do
+        for _, v in ipairs(data) do
+          if table.contains(v[2], id) then
+            table.insertIfNeed(areas, v[2])
+            break
+          end
+        end
+      end
+      return #areas == #selected
+    end
+  end,
+  default_choice = function(data)
+    if not data then return {} end
+    local cids = table.map(data, function(v) return v[2][1] end)
+    return cids
+  end,
+}
+
+Fk:loadTranslationTable{
+  ["askforCardsChosenFromAreas"] = "选牌",
+  ["#askforCardsChosenFromAreas"] = "选择每个区域各一张牌",
+}
+
 --- 让玩家观看一些卡牌（用来取代fillAG式观看）。
 ---@param player ServerPlayer | ServerPlayer[] @ 要询问的玩家
 ---@param cards integer[] @ 待选卡牌
