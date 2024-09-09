@@ -1980,41 +1980,6 @@ Utility.clearRemainCards = function(room, cards, skillName)
   end
 end
 
---- 执行额外回合（修复getCurrentExtraTurnReason bug）
----@param player ServerPlayer
----@param delay? boolean
----@param skillName string
-Utility.gainAnExtraTurn = function(player, delay, skillName)
-  fk.qWarning 'Utility.gainAnExtraTurn deprecated; use SPlayer:gainAnExtraTurn'
-  player:gainAnExtraTurn(delay, skillName)
-end
-
---- 比较距离
----@param from Player @ 起点角色
----@param to Player @ 终点角色
----@param num integer @ 比较基准
----@param operator string @ 运算符，有 ``"<"`` ``">"`` ``"<="`` ``">="`` ``"=="`` ``"~="``
----@return boolean @ 返回比较结果，不计入距离结果永远为false
-Utility.compareDistance = function(from, to, num, operator)
-  fk.qWarning 'Utility.compareDistance deprecated; use Player:compareDistance'
-  local distance = from:distanceTo(to)
-  if distance < 0 or num < 0 then return false end
-  if operator == ">" then
-    return distance > num
-  elseif operator == "<" then
-    return distance < num
-  elseif operator == "==" then
-    return distance == num
-  elseif operator == ">=" then
-    return distance >= num
-  elseif operator == "<=" then
-    return distance <= num
-  elseif operator == "~=" then
-    return distance ~= num
-  end
-  return false
-end
-
 --- 议事
 Utility.Discussion = function(data)
   --local discussionData = table.unpack(self.data)
@@ -2023,7 +1988,6 @@ Utility.Discussion = function(data)
   local room = data.from.room ---@type Room
   local logic = room.logic
   local from = discussionData.from
-  --logic:trigger(fk.StartDiscussion, discussionData.from, discussionData)
 
   if discussionData.reason ~= "" then
     room:sendLog{
@@ -2033,6 +1997,9 @@ Utility.Discussion = function(data)
     }
   end
   discussionData.color = "noresult"
+  discussionData.results = {}
+
+  logic:trigger("fk.StartDiscussion", from, discussionData)
 
   local extraData = {
     num = 1,
@@ -2042,68 +2009,74 @@ Utility.Discussion = function(data)
     reason = discussionData.reason,
   }
   local prompt = "#askForDiscussion"
-  local data = { "choose_cards_skill", prompt, false, extraData }
+  local dat = { "choose_cards_skill", prompt, false, extraData }
 
   local targets = {}
   for _, to in ipairs(discussionData.tos) do
-    if not (discussionData.results[to.id] and discussionData.results[to.id].toCard) then
+    if not (discussionData.results[to.id] and discussionData.results[to.id].opinion) then
       table.insert(targets, to)
-      to.request_data = json.encode(data)
+      to.request_data = json.encode(dat)
     end
   end
 
   room:notifyMoveFocus(targets, "AskForDiscussion")
   room:doBroadcastRequest("AskForUseActiveSkill", targets)
 
-  for _, p in ipairs(targets) do
-    local discussionCard
-    if p.reply_ready then
-      local replyCard = json.decode(p.client_reply).card
-      discussionCard = Fk:getCardById(json.decode(replyCard).subcards[1])
-    else
-      discussionCard = Fk:getCardById(p:getCardIds(Player.Hand)[1])
+  for _, p in ipairs(discussionData.tos) do
+    discussionData.results[p.id] = discussionData.results[p.id] or {}
+
+    if discussionData.results[p.id].opinion == nil then
+      local discussionCard
+      if p.reply_ready then
+        local replyCard = json.decode(p.client_reply).card
+        discussionCard = Fk:getCardById(json.decode(replyCard).subcards[1])
+      else
+        discussionCard = Fk:getCardById(p:getCardIds(Player.Hand)[1])
+      end
+      discussionData.results[p.id].toCard = discussionCard
+      discussionData.results[p.id].opinion = discussionCard:getColorString()
+
     end
 
-    discussionData.results[p.id] = discussionData.results[p.id] or {}
-    discussionData.results[p.id].toCard = discussionCard
-    discussionData.results[p.id].opinion = discussionCard.color
+    if discussionData.results[p.id].toCard then
+      p:showCards({discussionData.results[p.id].toCard})
+    elseif discussionData.results[p.id].opinion then
+      room:sendLog{
+        type = "#SendDiscussionOpinion",
+        from = p.id,
+        arg = discussionData.results[p.id].opinion,
+        toast = true,
+      }
+    end
 
-    p:showCards({discussionCard})
   end
   logic:trigger("fk.DiscussionCardsDisplayed", nil, discussionData)
 
-  local red, black = 0, 0
+  discussionData.opinions = {}
   for toId, result in pairs(discussionData.results) do
-    local to = room:getPlayerById(toId)
-    if result.opinion == Card.Red then
-      red = red + 1
-    elseif result.opinion == Card.Black then
-      black = black + 1
+    discussionData.opinions[result.opinion] = (discussionData.opinions[result.opinion] or 0) + 1
+  end
+  logic:trigger("fk.DiscussionResultConfirming", from, discussionData)
+
+  local max, result = 0, {}
+  for color, count in pairs(discussionData.opinions) do
+    if count > max then
+      max = count
     end
-
-    -- local singleDiscussionData = {
-    --   from = from,
-    --   to = to,
-    --   toCard = result.toCard,
-    --   color = result.toCard:getColorString(),
-    --   reason = discussionData.reason,
-    -- }
-
-    --logic:trigger(fk.DiscussionResultConfirmed, nil, singleDiscussionData)
   end
-
-  local discussionResult = "noresult"
-  if red > black then
-    discussionResult = "red"
-  elseif red < black then
-      discussionResult = "black"
+  for color, count in pairs(discussionData.opinions) do
+    if count == max then
+      table.insert(result, color)
+    end
   end
-  discussionData.color = discussionResult
+  if #result == 1 then
+    discussionData.color = result[1]
+  end
 
   room:sendLog{
     type = "#ShowDiscussionResult",
     from = from.id,
-    arg = discussionResult,
+    arg = discussionData.color,
     toast = true,
   }
 
@@ -2118,6 +2091,7 @@ Fk:loadTranslationTable{
   ["#StartDiscussionReason"] = "%from 由于 %arg 而发起议事",
   ["#askForDiscussion"] = "请展示一张手牌进行议事",
   ["AskForDiscussion"] = "议事",
+  ["#SendDiscussionOpinion"] = "%from 的意见为 %arg",
   ["noresult"] = "无结果",
   ["#ShowDiscussionResult"] = "%from 的议事结果为 %arg",
 }
