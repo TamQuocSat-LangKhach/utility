@@ -756,6 +756,17 @@ Utility.askforChooseCardsAndChoice = function(player, cards, choices, skillname,
   assert(min <= max, "limits error: The upper limit should be less than the lower limit")
   assert(#cards >= min or #cancel_choices > 0, "limits Error: No enough cards")
   assert(#choices > 0 or #cancel_choices > 0, "should have choice to choose")
+  local cardsToWatch = table.filter(all_cards or cards, function (id)
+    return player.room:getCardArea(id) == Player.Hand and player.room:getCardOwner(id) ~= player
+  end)
+  if #cardsToWatch > 0 then
+    local log = {
+      type = "#WatchCard",
+      from = player.id,
+      card = cardsToWatch,
+    }
+    player:doNotify("GameLog", json.encode(log))
+  end
   local result = player.room:askForCustomDialog(player, skillname,
   "packages/utility/qml/ChooseCardsAndChoiceBox.qml", {
     all_cards or cards,
@@ -909,7 +920,7 @@ Utility.viewCards = function(player, cards, skillname, prompt)
     end
 
     local room = player[1].room
-    room:notifyMoveFocus(player, skillname)
+    room:notifyMoveFocus(player, skillname or "utility_viewcards")
     room:doBroadcastRequest("CustomDialog", player)
   end
 end
@@ -918,6 +929,7 @@ Fk:loadTranslationTable{
   ["utility_viewcards"] = "观看卡牌",
   ["$ViewCards"] = "请观看卡牌",
   ["$ViewCardsFrom"] = "请观看 %src 的卡牌",
+  ["#WatchCard"] = "%from 观看了牌 %card",
 }
 
 
