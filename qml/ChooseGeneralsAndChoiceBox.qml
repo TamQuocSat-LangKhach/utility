@@ -19,16 +19,15 @@ GraphicsBox {
   property int max
   property var cancel_options: []
 
-  title.text: prompt !== "" ? Util.processPrompt(prompt) : luatr("$ChooseCard")
-  // TODO: Adjust the UI design in case there are more than 7 cards
-  width: 40 + Math.min(8.5, Math.max(4, cards.length)) * 100
-  height: 260
+  property bool isSearching: false
+  
+  width: 40 + Math.min(7, Math.max(4, cards.length)) * 100
+  height: 120 + Math.min(2.2, Math.ceil(cards.length / 7)) * 140
 
   Component {
     id: cardDelegate
     GeneralCardItem {
       name: modelData
-      autoBack: false
       selectable: !disable_cards.includes(name)
       onSelectedChanged: {
         if (ok_options.length == 0) return;
@@ -40,8 +39,6 @@ GraphicsBox {
           root.selectedItem.splice(root.selectedItem.indexOf(name), 1);
           chosenInBox = false;
         }
-        origX = x;
-        goBack(true);
 
         root.updateCardSelectable();
       }
@@ -53,43 +50,38 @@ GraphicsBox {
   }
 
   Rectangle {
-    id: right
+    id: cardArea
     anchors.fill: parent
-    anchors.topMargin: 40
+    anchors.topMargin: 60
     anchors.leftMargin: 15
     anchors.rightMargin: 15
-    anchors.bottomMargin: 50
+    anchors.bottomMargin: 55
 
     color: "#88EEEEEE"
     radius: 10
 
     Flickable {
-      id: flickableContainer
-      ScrollBar.horizontal: ScrollBar {}
+      id: generalContainer
 
-      flickableDirection: Flickable.HorizontalFlick
       anchors.fill: parent
-      anchors.topMargin: 0
+      anchors.topMargin: 5
       anchors.leftMargin: 5
       anchors.rightMargin: 5
-      anchors.bottomMargin: 10
+      anchors.bottomMargin: 5
 
-      contentWidth: cardsList.width
-      contentHeight: cardsList.height
+      contentHeight: gridLayout.implicitHeight
       clip: true
 
-      ColumnLayout {
-        id: cardsList
-        anchors.top: parent.top
-        anchors.topMargin: 20
+      GridLayout {
+        id: gridLayout
+        columns: 7
+        width: parent.width
+        clip: true
 
-        Row {
-          spacing: 5
-          Repeater {
-            id: to_select
-            model: cards
-            delegate: cardDelegate
-          }
+        Repeater {
+          id: to_select
+          model: cards
+          delegate: cardDelegate
         }
       }
     }
@@ -151,6 +143,80 @@ GraphicsBox {
           }
         }
       }
+    }
+  }
+
+
+  Item {
+    id : titleArea
+    anchors.top: parent.top
+    anchors.topMargin: 5
+    anchors.horizontalCenter: parent.horizontalCenter
+
+    height: 40
+    width: parent.width - 30
+
+
+    RowLayout {
+      anchors.fill: parent
+
+      Text {
+        font.pixelSize: 20
+        color: "#E4D5A0"
+        text: Util.processPrompt(prompt)
+        horizontalAlignment: Text.AlignHCenter
+        Layout.fillWidth: true
+      }
+          
+      TextField {
+        visible: cards.length > 21
+        enabled: !isSearching
+        id: word
+        placeholderText: isSearching ? "" : "Search..."
+        clip: true
+        verticalAlignment: Qt.AlignVCenter
+        background: Rectangle {
+          implicitHeight: 20
+          implicitWidth: 120
+          color: "#88EEEEEE"
+          radius: 5
+        }
+      }
+
+      ToolButton {
+        visible: cards.length > 21
+        text: isSearching ? luatr("Back") : luatr("Search")
+        enabled: (word.text !== "" || isSearching)
+        onClicked: {
+          if (isSearching) {
+            for (var i = 0; i < to_select.count; i++) {
+              to_select.itemAt(i).visible = true;
+            }
+            isSearching = false;
+            generalContainer.contentWidth = Math.min(7, cards.length) * 100;
+          } else {
+            var findNum = 0;
+            for (var i = 0; i < to_select.count; i++) {
+              const item = to_select.itemAt(i);
+              if (luatr(item.name).indexOf(word.text) === -1) {
+                item.visible = false;
+              } else {
+                findNum++;
+              }
+              generalContainer.contentWidth = Math.min(7, findNum) * 100;
+            }
+            word.text = "";
+            isSearching = true;
+          }
+        }
+        background: Rectangle {
+          implicitHeight: 35
+          implicitWidth: 40
+          color: "#88EEEEEE"
+          radius: 5
+        }
+      }
+      
     }
   }
 
