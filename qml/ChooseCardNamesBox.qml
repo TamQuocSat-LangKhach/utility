@@ -95,8 +95,8 @@ GraphicsBox {
 
           GlowText {
             id : numText
-            text: num.toString();
-            visible : num > 0
+            text: repeatable ? num.toString() : "√"
+            visible : num !== 0
             font.family: fontLibian.name
             font.pixelSize: 30
             font.bold: true
@@ -125,26 +125,25 @@ GraphicsBox {
           MouseArea {
             anchors.fill: parent
             anchors.centerIn: parent
+            enabled : cardItem.enabled
             onClicked: {
-              if (selectedItem.length < max && this.enabled && (repeatable || !selectedItem.includes(modelData))) {
-                selectedItem.push(modelData);
-                cardItem.num ++;
-                updateSelectable()
-              }
-            }
-
-            /* push this to minus num
-            onRightClicked: {
-              if (cardItem.num > 0) {
+              if (repeatable) {
+                if (selectedItem.length < max) {
+                  selectedItem.push(modelData);
+                  cardItem.num ++;
+                }
+              } else {
                 let index = selectedItem.indexOf(modelData);
                 if (index !== -1) {
-                  root.selectedItem.splice(index, 1);
-                  -- cardItem.num;
-                  updateSelectable();
+                  selectedItem.splice(index, 1);
+                  cardItem.num = 0;
+                } else if (selectedItem.length < max) {
+                  selectedItem.push(modelData);
+                  cardItem.num = 1;
                 }
               }
+              updateSelectable()
             }
-            */
 
           }
 
