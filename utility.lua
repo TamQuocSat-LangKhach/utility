@@ -354,13 +354,7 @@ Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2,
   if #moveInfos > 0 then
     room:moveCards(table.unpack(moveInfos))
   end
-  table.insertTable(cards1, cards2)
-  local dis_cards = table.filter(cards1, function (id)
-    return room:getCardArea(id) == Card.Processing
-  end)
-  if #dis_cards > 0 then
-    room:moveCardTo(dis_cards, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile, skillName, nil, true, player.id)
-  end
+  room:cleanProcessingArea(table.connect(cards1, cards2), skillName)
 end
 
 -- 令两名角色交换手牌（FIXME：暂时只能正面朝上移动过）
