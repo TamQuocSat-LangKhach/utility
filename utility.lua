@@ -1402,7 +1402,9 @@ Utility.GetFriends = function(room, player, include_self, include_dead)
   local players = include_dead and room.players or room.alive_players
   local friends = table.filter(players, function (p)
     return p.role == player.role or
-      (table.contains({"lord", "loyalist"}, p.role) and table.contains({"lord", "loyalist"}, player.role))
+      (table.contains({"lord", "loyalist"}, p.role) and table.contains({"lord", "loyalist"}, player.role)) or
+      (p.role:startsWith("warm_") and player.role:startsWith("warm_")) or
+      (p.role:startsWith("cool_") and player.role:startsWith("cool_"))
   end)
   if not include_self then
     table.removeOne(friends, player)
@@ -1419,7 +1421,9 @@ Utility.GetEnemies = function(room, player, include_dead)
   local players = include_dead and room.players or room.alive_players
   return table.filter(players, function (p)
     return p.role ~= player.role and
-      not (table.contains({"lord", "loyalist"}, p.role) and table.contains({"lord", "loyalist"}, player.role))
+      not (table.contains({"lord", "loyalist"}, p.role) and table.contains({"lord", "loyalist"}, player.role)) and
+      ((p.role:startsWith("warm_") and player.role:startsWith("cool_")) or
+      (p.role:startsWith("cool_") and player.role:startsWith("warm_")))
   end)
 end
 
@@ -1760,8 +1764,21 @@ Utility.getActualDamageEvents = function(room, n, func, scope, end_id)
   return ret
 end
 
+--- 赠予
+---@param player ServerPlayer @ 交出牌的玩家
+---@param target ServerPlayer @ 获得牌的玩家
+---@param card integer|Card @ 赠予的牌
+---@return boolean
 Utility.presentCard = function(player, target, card)
   local room = player.room
+  if type(card) == "number" then
+    card = Fk:getCardById(card)
+  end
+  if room.logic:trigger("fk.BeforePresentCardFail", player, {to = target, card = card}) then
+    room.logic:trigger("fk.PresentCardFail", player, {to = target, card = card})
+    room:moveCardTo(card, Card.DiscardPile, target, fk.ReasonJustMove, "present", nil, true, player.id)
+    return false
+  end
   if card.type ~= Card.TypeEquip then
     room:moveCardTo(card, Card.PlayerHand, target, fk.ReasonGive, "present", nil, true, player.id)
   else
@@ -1786,9 +1803,12 @@ Utility.presentCard = function(player, target, card)
         proposer = player.id,
       })
     elseif #target:getAvailableEquipSlots(card.sub_type) == 0 then
+      room.logic:trigger("fk.PresentCardFail", player, {to = target, card = card})
       room:moveCardTo(card, Card.DiscardPile, target, fk.ReasonJustMove, "present", nil, true, player.id)
+      return false
     end
   end
+  return true
 end
 
 --- 询问玩家选择X张牌和Y名角色。
