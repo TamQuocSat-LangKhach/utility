@@ -2062,12 +2062,17 @@ Utility.Discussion = function(data)
       end
       discussionData.results[p.id].toCard = discussionCard
       discussionData.results[p.id].opinion = discussionCard:getColorString()
-
     end
 
     if discussionData.results[p.id].toCard then
-      p:showCards({discussionData.results[p.id].toCard})
-    elseif discussionData.results[p.id].opinion then
+      discussionData.results[p.id].toCards = {discussionData.results[p.id].toCard.id}
+    end
+
+    if discussionData.results[p.id].toCards then
+      p:showCards(discussionData.results[p.id].toCards)
+    end
+
+    if discussionData.results[p.id].opinion then
       room:sendLog{
         type = "#SendDiscussionOpinion",
         from = p.id,
@@ -2096,7 +2101,7 @@ Utility.Discussion = function(data)
       table.insert(result, color)
     end
   end
-  if #result == 1 then
+  if #result == 1 and result[1] ~= "nocolor" then
     discussionData.color = result[1]
   end
 
