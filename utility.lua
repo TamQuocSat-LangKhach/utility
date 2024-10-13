@@ -929,10 +929,10 @@ Fk:loadTranslationTable{
 
 --- 将一些卡牌同时分配给一些角色。
 ---@param room Room @ 房间
----@param list table<integer[]> @ 分配牌和角色的数据表，键为取整后字符串化的角色id，值为分配给其的牌
+---@param list table<string, integer[]> @ 分配牌和角色的数据表，键为取整后字符串化的角色id，值为分配给其的牌
 ---@param proposer? integer @ 操作者的id。默认为空
 ---@param skillName? string @ 技能名。默认为“分配”
----@return table<integer[]> @ 返回成功分配的卡牌
+---@return integer[][] @ 返回成功分配的卡牌
 Utility.doDistribution = function (room, list, proposer, skillName)
   skillName = skillName or "distribution_skill"
   local moveInfos = {}
@@ -1001,7 +1001,7 @@ end
 ---@param expand_pile? string|integer[] @ 可选私人牌堆名称，如要分配你武将牌上的牌请填写
 ---@param skipMove? boolean @ 是否跳过移动。默认不跳过
 ---@param single_max? integer|table @ 限制每人能获得的最大牌数。输入整数或(以角色id为键以整数为值)的表
----@return table<integer[]> @ 返回一个表，键为取整后字符串化的角色id，值为分配给其的牌
+---@return table<string, integer[]> @ 返回一个表，键为取整后字符串化的角色id，值为分配给其的牌
 Utility.askForDistribution = function(player, cards, targets, skillName, minNum, maxNum, prompt, expand_pile, skipMove, single_max)
   local room = player.room
   targets = targets or room.alive_players
