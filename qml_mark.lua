@@ -52,9 +52,7 @@ Fk:addQmlMark{
     if string.startsWith(name, "@[private]$") or string.startsWith(name, "@[private]&") or string.startsWith(name, "@[private]:") then
       return tostring(#value.value)
     elseif (value.players == nil and Self == p) or (value.players and table.contains(value.players, Self.id)) then
-      return table.concat(table.map(value.value, function(_value)
-        return Fk:translate(_value)
-      end), " ")
+      return table.concat(table.map(value.value, Util.TranslateMapper), " ")
     end
     return " "
   end,
