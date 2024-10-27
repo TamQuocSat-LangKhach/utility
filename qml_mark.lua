@@ -10,6 +10,22 @@ Fk:addQmlMark{
     end), "")
   end,
 }
+-- 在脸上显示角色武将名（若有副将，改为显示位置）
+-- 传入值：角色ID
+Fk:addQmlMark{
+  name = "chara",
+  qml_path = "",
+  how_to_show = function(_, value)
+    if type(value) ~= "number" then return " " end
+    local player = Fk:currentRoom():getPlayerById(value)
+    if (not player) or (not player.general) or (player.general == "") then return " " end
+    local ret = player.general
+    if player.deputyGeneral and player.deputyGeneral ~= "" then
+      ret = "seat#" .. player.seat
+    end
+    return ret
+  end,
+}
 -- 在脸上显示类别
 -- 传入值：card type数组（不是card string）
 Fk:addQmlMark{
