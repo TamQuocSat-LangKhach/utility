@@ -23,7 +23,7 @@ Fk:addQmlMark{
     if player.deputyGeneral and player.deputyGeneral ~= "" then
       ret = "seat#" .. player.seat
     end
-    return ret
+    return Fk:translate(ret)
   end,
 }
 -- 在脸上显示类别
