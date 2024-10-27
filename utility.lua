@@ -15,6 +15,7 @@ local Utility = require 'packages/utility/_base'
 ---@param end_id integer @ 查询历史范围：从最后的事件开始逆序查找直到id为end_id的事件（不含）
 ---@return GameEvent[] @ 找到的符合条件的所有事件，最多n个但不保证有n个
 Utility.getEventsByRule = function(room, eventType, n, func, end_id)
+  fk.qCritical("Utility.getEventsByRule is deprecated! Use Room:getEventsByRule instead")
   local ret = {}
 	local events = room.logic.event_recorder[eventType] or Util.DummyTable
   for i = #events, 1, -1 do
@@ -59,6 +60,7 @@ end
 ---@param by_user? bool @ 进一步判定使用者和来源是否一致（默认为true）
 ---@return bool
 Utility.damageByCardEffect = function(room, by_user)
+  fk.qCritical("Utility.damageByCardEffect is deprecated! Use GameLogic:getEventsByRule instead")
   by_user = (by_user == nil) and true or by_user
   local d_event = room.logic:getCurrentEvent():findParent(GameEvent.Damage, true)
   if d_event == nil then return false end
@@ -105,6 +107,7 @@ end
 ---@param use_AimGroup boolean? @ 某些场合需要使用AimGroup，by smart Ho-spair
 ---@return integer[] @ 返回满足条件的player的id列表
 Utility.getUseExtraTargets = function(room, data, bypass_distances, use_AimGroup)
+  fk.qCritical("Utility.getUseExtraTargets is deprecated! Use Room:getUseExtraTargets instead")
   if not (data.card.type == Card.TypeBasic or data.card:isCommonTrick()) then return {} end
   if data.card.skill:getMinTargetNum() > 1 then return {} end --stupid collateral
   local tos = {}
@@ -554,6 +557,7 @@ end
 ---@param mark string @ 标记
 ---@return table
 Utility.getMark = function(player, mark)
+  fk.qCritical("Utility.getMark is deprecated! Use Room:getTableMark instead")
   return type(player:getMark(mark)) == "table" and player:getMark(mark) or {}
 end
 
@@ -934,6 +938,7 @@ Fk:loadTranslationTable{
 ---@param skillName? string @ 技能名。默认为“分配”
 ---@return integer[][] @ 返回成功分配的卡牌
 Utility.doDistribution = function (room, list, proposer, skillName)
+  fk.qCritical("Utility.doDistribution is deprecated! Use Room:doYiji instead")
   skillName = skillName or "distribution_skill"
   local moveInfos = {}
   local move_ids = {}
@@ -1003,6 +1008,7 @@ end
 ---@param single_max? integer|table @ 限制每人能获得的最大牌数。输入整数或(以角色id为键以整数为值)的表
 ---@return table<string, integer[]> @ 返回一个表，键为取整后字符串化的角色id，值为分配给其的牌
 Utility.askForDistribution = function(player, cards, targets, skillName, minNum, maxNum, prompt, expand_pile, skipMove, single_max)
+  fk.qCritical("Utility.askForDistribution is deprecated! Use Room:askForYiji instead")
   local room = player.room
   targets = targets or room.alive_players
   cards = cards or player:getCardIds("he")
@@ -1379,6 +1385,7 @@ Fk:loadTranslationTable{
 ---@param realGender? boolean @ 是否获取真实性别，无视双性人。默认否
 ---@return boolean
 Utility.isMale = function(player, realGender)
+  fk.qCritical("Utility.isMale is deprecated! Use Player.isMale instead")
   return player.gender == General.Male or (not realGender and player.gender == General.Bigender)
 end
 
@@ -1388,6 +1395,7 @@ end
 ---@param realGender? boolean @ 是否获取真实性别，无视双性人。默认否
 ---@return boolean
 Utility.isFemale = function(player, realGender)
+  fk.qCritical("Utility.isFemale is deprecated! Use Player.isFemale instead")
   return player.gender == General.Female or (not realGender and player.gender == General.Bigender)
 end
 
@@ -1647,6 +1655,7 @@ Fk:addSkill(global_slash_targetmod)
 
 --- 获取实际的伤害事件
 Utility.getActualDamageEvents = function(room, n, func, scope, end_id)
+  fk.qCritical("Utility.getActualDamageEvents is deprecated! Use GameLogic.getActualDamageEvents instead")
   if not end_id then
     scope = scope or Player.HistoryTurn
   end
@@ -1828,7 +1837,7 @@ end
 ---@param no_indicate? boolean @ 是否不显示指示线
 ---@return integer[], integer[]
 function Utility.askForChooseCardsAndPlayers(self, player, minCardNum, maxCardNum, targets, minTargetNum, maxTargetNum, pattern, prompt, skillName, cancelable, no_indicate)
-  print("Utility.askForChooseCardsAndPlayers is deprecated. Use Room:askForChooseCardsAndPlayers instead.")
+  fk.qCritical("Utility.askForChooseCardsAndPlayers is deprecated. Use Room:askForChooseCardsAndPlayers instead.")
   return self:askForChooseCardsAndPlayers(player, minCardNum, maxCardNum, targets, minTargetNum, maxTargetNum, pattern, prompt, skillName, cancelable, no_indicate)
 end
 --从键值对表中随机取N个值（每种最多取一个）
@@ -2480,6 +2489,53 @@ Utility.askForChooseCardList = function (room, player, listNames, listCards, min
   end
   return choices
 end
+
+--- 同时询问多名玩家从众多选项中选择一个（要求所有玩家选项相同，不同的请自行构造request）
+---@param player ServerPlayer @ 发起询问的玩家
+---@param targets ServerPlayer[] @ 被询问的玩家
+---@param choices string[] @ 选项列表
+---@param skillName? string @ 技能名
+---@param prompt? string @ 提示信息
+---@param sendLog? boolean @ 是否发Log，默认否
+---@return table<integer, string> @ 返回键值表，键为玩家id、值为选项
+Utility.askForJointChoice = function (player, targets, choices, skillName, prompt, sendLog)
+  local room = player.room
+  skillName = skillName or "AskForChoice"
+  prompt = prompt or "AskForChoice"
+
+  local req = Request:new(targets, "AskForChoice")
+  req.focus_text = skillName
+  req.receive_decode = false
+  local data = {
+    choices,
+    choices,  --如果all_choices和choices不一样应该自行构造request
+    skillName,
+    prompt,
+  }
+  for _, p in ipairs(targets) do
+    req:setData(p, data)
+    req:setDefaultReply(p, table.random(choices))  --默认项为随机选项
+  end
+  req:ask()
+  if sendLog then
+    for _, p in ipairs(targets) do
+      room:sendLog{
+        type = "#Choice",
+        from = p.id,
+        arg = req:getResult(p),
+        toast = true,
+      }
+    end
+  end
+  local ret = {}
+  for _, p in ipairs(targets) do
+    ret[p.id] = req:getResult(p)
+  end
+  return ret
+end
+Fk:loadTranslationTable{
+  ["#Choice"] = "%from 选择 %arg",
+}
 
 dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'
