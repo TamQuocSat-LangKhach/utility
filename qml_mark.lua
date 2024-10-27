@@ -16,7 +16,8 @@ Fk:addQmlMark{
   name = "chara",
   qml_path = "",
   how_to_show = function(_, value)
-    if type(value) ~= "number" then return " " end
+    if type(value) == "string" then value = tonumber(value) end --- 实际访问的时候这里会出string
+    if not value or type(value) ~= "number" then return " " end
     local player = Fk:currentRoom():getPlayerById(value)
     if (not player) or (not player.general) or (player.general == "") then return " " end
     local ret = player.general
