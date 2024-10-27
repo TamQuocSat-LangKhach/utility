@@ -2491,19 +2491,17 @@ Utility.askForChooseCardList = function (room, player, listNames, listCards, min
 end
 
 --- 同时询问多名玩家从众多选项中选择一个（要求所有玩家选项相同，不同的请自行构造request）
----@param player ServerPlayer @ 发起询问的玩家
----@param targets ServerPlayer[] @ 被询问的玩家
+---@param players ServerPlayer[] @ 被询问的玩家
 ---@param choices string[] @ 选项列表
 ---@param skillName? string @ 技能名
 ---@param prompt? string @ 提示信息
 ---@param sendLog? boolean @ 是否发Log，默认否
 ---@return table<integer, string> @ 返回键值表，键为玩家id、值为选项
-Utility.askForJointChoice = function (player, targets, choices, skillName, prompt, sendLog)
-  local room = player.room
+Utility.askForJointChoice = function (players, choices, skillName, prompt, sendLog)
   skillName = skillName or "AskForChoice"
   prompt = prompt or "AskForChoice"
 
-  local req = Request:new(targets, "AskForChoice")
+  local req = Request:new(players, "AskForChoice")
   req.focus_text = skillName
   req.receive_decode = false
   local data = {
@@ -2512,14 +2510,14 @@ Utility.askForJointChoice = function (player, targets, choices, skillName, promp
     skillName,
     prompt,
   }
-  for _, p in ipairs(targets) do
+  for _, p in ipairs(players) do
     req:setData(p, data)
     req:setDefaultReply(p, table.random(choices))  --默认项为随机选项
   end
   req:ask()
   if sendLog then
-    for _, p in ipairs(targets) do
-      room:sendLog{
+    for _, p in ipairs(players) do
+      p.room:sendLog{
         type = "#Choice",
         from = p.id,
         arg = req:getResult(p),
@@ -2528,7 +2526,7 @@ Utility.askForJointChoice = function (player, targets, choices, skillName, promp
     end
   end
   local ret = {}
-  for _, p in ipairs(targets) do
+  for _, p in ipairs(players) do
     ret[p.id] = req:getResult(p)
   end
   return ret
@@ -2536,6 +2534,75 @@ end
 Fk:loadTranslationTable{
   ["#Choice"] = "%from 选择 %arg",
 }
+
+--- 同时询问多名玩家选择一些牌（要求所有玩家选牌规则相同，不同的请自行构造request）
+---@param players ServerPlayer[] @ 被询问的玩家
+---@param minNum integer @ 最小值
+---@param maxNum integer @ 最大值
+---@param includeEquip? boolean @ 能不能选装备
+---@param skillName? string @ 技能名
+---@param cancelable? boolean @ 能否点取消
+---@param pattern? string @ 选牌规则
+---@param prompt? string @ 提示信息
+---@param expand_pile? string @ 可选私人牌堆名称
+---@param discard_skill? boolean @ 是否是弃牌，默认否（在这个流程中牌不会被弃掉，仅用作禁止弃置技判断）
+---@return table<integer, integer[]> @ 返回键值表，键为玩家id、值为选择的id列表
+Utility.askForJointCard = function (players, minNum, maxNum, includeEquip, skillName, cancelable, pattern, prompt, expand_pile, discard_skill)
+  skillName = skillName or "AskForCardChosen"
+  cancelable = (cancelable == nil) and true or cancelable
+  pattern = pattern or "."
+  prompt = prompt or ("#AskForCard:::" .. maxNum .. ":" .. minNum)
+
+  local req = Request:new(players, "AskForUseActiveSkill")
+  req.focus_text = skillName
+  local data = {
+    discard_skill and "discard_skill" or "choose_cards_skill",
+    prompt,
+    cancelable,
+    {
+      num = maxNum,
+      min_num = minNum,
+      include_equip = includeEquip,
+      skillName = skillName,
+      pattern = pattern,
+      expand_pile = expand_pile,
+    },
+  }
+  for _, p in ipairs(players) do
+    req:setData(p, data)
+    if cancelable then
+      req:setDefaultReply(p, {})
+    else
+      local cards = p:getCardIds("he&")
+      if type(expand_pile) == "string" then
+        table.insertTable(cards, p:getPile(expand_pile))
+      elseif type(expand_pile) == "table" then
+        table.insertTable(cards, expand_pile)
+      end
+      local exp = Exppattern:Parse(pattern)
+      cards = table.filter(cards, function(cid)
+        return exp:match(Fk:getCardById(cid))
+      end)
+      cards = table.random(cards, minNum)
+      req:setDefaultReply(p, cards)
+    end
+  end
+  req:ask()
+  local ret = {}
+  for _, p in ipairs(players) do
+    local ids = {}
+    local result = req:getResult(p)
+    if result ~= "" then
+      if result.card then
+        ids = json.decode(result.card).subcards
+      else
+        ids = result
+      end
+    end
+    ret[p.id] = ids
+  end
+  return ret
+end
 
 dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'
