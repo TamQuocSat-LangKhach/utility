@@ -557,7 +557,7 @@ end
 ---@param mark string @ 标记
 ---@return table
 Utility.getMark = function(player, mark)
-  fk.qWarning("Utility.getMark is deprecated! Use Room:getTableMark instead")
+  fk.qWarning("Utility.getMark is deprecated! Use Player:getTableMark instead")
   return type(player:getMark(mark)) == "table" and player:getMark(mark) or {}
 end
 
