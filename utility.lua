@@ -1370,6 +1370,9 @@ Utility.askForPlayCard = function(room, player, cards, pattern, skillName, promp
   extra_data = extra_data or {}
   local use = room:askForUseCard(player, skillName, useable_pattern, prompt, true, extra_data)
   if not use then return end
+  if extra_data.extraUse then
+    use.extraUse = true
+  end
   if not skipUse then
     room:useCard(use)
   end
