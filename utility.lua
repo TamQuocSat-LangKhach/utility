@@ -15,7 +15,7 @@ local Utility = require 'packages/utility/_base'
 ---@param end_id integer @ 查询历史范围：从最后的事件开始逆序查找直到id为end_id的事件（不含）
 ---@return GameEvent[] @ 找到的符合条件的所有事件，最多n个但不保证有n个
 Utility.getEventsByRule = function(room, eventType, n, func, end_id)
-  fk.qWarning("Utility.getEventsByRule is deprecated! Use Room:getEventsByRule instead")
+  fk.qWarning("Utility.getEventsByRule is deprecated! Use GameLogic:getEventsByRule instead")
   local ret = {}
 	local events = room.logic.event_recorder[eventType] or Util.DummyTable
   for i = #events, 1, -1 do
@@ -60,7 +60,7 @@ end
 ---@param by_user? bool @ 进一步判定使用者和来源是否一致（默认为true）
 ---@return bool
 Utility.damageByCardEffect = function(room, by_user)
-  fk.qWarning("Utility.damageByCardEffect is deprecated! Use GameLogic:getEventsByRule instead")
+  fk.qWarning("Utility.damageByCardEffect is deprecated! Use GameLogic:damageByCardEffect instead")
   by_user = (by_user == nil) and true or by_user
   local d_event = room.logic:getCurrentEvent():findParent(GameEvent.Damage, true)
   if d_event == nil then return false end
@@ -2016,12 +2016,26 @@ Utility.clearRemainCards = function(room, cards, skillName)
   end
 end
 
---- 议事
-Utility.Discussion = function(data)
-  --local discussionData = table.unpack(self.data)
-  local discussionData = data
-  --local room = self.room
-  local room = data.from.room ---@type Room
+
+--- DiscussionStruct 议事的数据
+---@class DiscussionStruct
+---@field public from ServerPlayer @ 发起议事的角色
+---@field public tos ServerPlayer[] @ 参与议事的角色
+---@field public results table<integer, DiscussionResult> @ 结果
+---@field public color string @ 议事结果
+---@field public reason string @ 议事原因
+
+--- DiscussionResult 议事的结果数据
+---@class DiscussionResult
+---@field public toCards integer[] @ 议事展示的牌
+---@field public opinion string @ 议事意见
+---@field public opinions string[] @ 议事意见汇总
+
+Utility.DiscussionEvent = "GameEvent.Discussion"
+
+Fk:addGameEvent(Utility.DiscussionEvent, nil, function (self)
+  local discussionData = table.unpack(self.data) ---@class discussionData
+  local room = self.room ---@type Room
   local logic = room.logic
   local from = discussionData.from
 
@@ -2037,45 +2051,47 @@ Utility.Discussion = function(data)
 
   logic:trigger("fk.StartDiscussion", from, discussionData)
 
-  local extraData = {
-    num = 1,
-    min_num = 1,
-    include_equip = false,
-    pattern = ".",
-    reason = discussionData.reason,
-  }
-  local prompt = "#askForDiscussion"
-  local dat = { "choose_cards_skill", prompt, false, extraData }
 
   local targets = {}
   for _, to in ipairs(discussionData.tos) do
     if not (discussionData.results[to.id] and discussionData.results[to.id].opinion) then
       table.insert(targets, to)
-      to.request_data = json.encode(dat)
+    end
+  end
+  if #targets > 0 then
+    local req = Request:new(targets, "AskForUseActiveSkill")
+    req.focus_text = discussionData.reason
+    local extraData = {
+      num = 1,
+      min_num = 1,
+      include_equip = false,
+      pattern = ".",
+      reason = discussionData.reason,
+    }
+    local data = { "choose_cards_skill", "#askForDiscussion", false, extraData }
+    for _, p in ipairs(targets) do
+      req:setData(p, data)
+      req:setDefaultReply(p, table.random(p:getCardIds("h"), 1))
+    end
+    req:ask()
+    for _, p in ipairs(targets) do
+      discussionData.results[p.id] = discussionData.results[p.id] or {}
+      local result = req:getResult(p)
+      if result ~= "" then
+        local id
+        if result.card then
+          id = json.decode(result.card).subcards[1]
+        else
+          id = result[1]
+        end
+        discussionData.results[p.id].toCards = {id}
+        discussionData.results[p.id].opinion = Fk:getCardById(id):getColorString()
+      end
     end
   end
 
-  room:notifyMoveFocus(targets, "AskForDiscussion")
-  room:doBroadcastRequest("AskForUseActiveSkill", targets)
-
   for _, p in ipairs(discussionData.tos) do
     discussionData.results[p.id] = discussionData.results[p.id] or {}
-
-    if discussionData.results[p.id].opinion == nil then
-      local discussionCard
-      if p.reply_ready then
-        local replyCard = json.decode(p.client_reply).card
-        discussionCard = Fk:getCardById(json.decode(replyCard).subcards[1])
-      else
-        discussionCard = Fk:getCardById(p:getCardIds(Player.Hand)[1])
-      end
-      discussionData.results[p.id].toCard = discussionCard
-      discussionData.results[p.id].opinion = discussionCard:getColorString()
-    end
-
-    if discussionData.results[p.id].toCard then
-      discussionData.results[p.id].toCards = {discussionData.results[p.id].toCard.id}
-    end
 
     if discussionData.results[p.id].toCards then
       p:showCards(discussionData.results[p.id].toCards)
@@ -2089,7 +2105,6 @@ Utility.Discussion = function(data)
         toast = true,
       }
     end
-
   end
   logic:trigger("fk.DiscussionCardsDisplayed", nil, discussionData)
 
@@ -2101,16 +2116,16 @@ Utility.Discussion = function(data)
 
   local max, result = 0, {}
   for color, count in pairs(discussionData.opinions) do
-    if count > max then
+    if color ~= "nocolor" and color ~= "noresult" and count > max then
       max = count
     end
   end
   for color, count in pairs(discussionData.opinions) do
-    if count == max then
+    if color ~= "nocolor" and color ~= "noresult" and count == max then
       table.insert(result, color)
     end
   end
-  if #result == 1 and result[1] ~= "nocolor" then
+  if #result == 1 then
     discussionData.color = result[1]
   end
 
@@ -2126,8 +2141,8 @@ Utility.Discussion = function(data)
   if logic:trigger("fk.DiscussionFinished", from, discussionData) then
     logic:breakEvent()
   end
-  return discussionData  --FIXME
-end
+  if not self.interrupted then return end
+end)
 Fk:loadTranslationTable{
   ["#StartDiscussionReason"] = "%from 由于 %arg 而发起议事",
   ["#askForDiscussion"] = "请展示一张手牌进行议事",
@@ -2136,6 +2151,24 @@ Fk:loadTranslationTable{
   ["noresult"] = "无结果",
   ["#ShowDiscussionResult"] = "%from 的议事结果为 %arg",
 }
+
+--- 进行议事
+---@param player ServerPlayer @ 发起议事的角色
+---@param tos ServerPlayer[] @ 参与议事的角色
+---@param reason string? @ 议事技能名
+---@param extra_data any? @ extra_data
+---@return DiscussionStruct
+Utility.Discussion = function(player, tos, reason, extra_data)
+  local discussionData = {
+    from = player,
+    tos = tos,
+    reason = reason or "AskForDiscussion",
+    extra_data = extra_data or {},
+  }
+  local event = GameEvent:new(Utility.DiscussionEvent, discussionData)
+  local _, ret = event:exec()
+  return discussionData
+end
 
 --- JointPindianStruct 共同拼点的数据
 ---@class JointPindianStruct
