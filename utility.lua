@@ -816,28 +816,28 @@ Utility.askforCardsChosenFromAreas = function(chooser, target, flag, skill_name,
   if type(flag) ~= "string" then
     flag = "hej"
   end
-  if string.find(flag, "h") and target:getHandcardNum() > 0 then
-    local handcards = {}
-    if chooser:isBuddy(target) then
-      handcards = target:getCardIds("h")
-    else
-      local n = #table.filter(target:getCardIds("h"), function (id)
-        return not table.contains(disable_ids, id)
-      end)
-      if n > 0 then
-        for i = 1, n, 1 do
-          table.insert(handcards, -1)
-        end
-      end
-    end
-    local cards = table.filter(handcards, function (id)
+  local data = {
+    to = target.id,
+    skillName = skill_name,
+    prompt = prompt,
+  }
+  local visible_data = {}
+  if string.find(flag, "h") then
+    local cards = table.filter(target:getCardIds("h"), function (id)
       return not table.contains(disable_ids, id)
     end)
     if #cards > 0 then
       table.insert(card_data, {"$Hand", cards})
+      for _, id in ipairs(cards) do
+        if not chooser:cardVisible(id) then
+          visible_data[tostring(id)] = false
+        end
+      end
+      if next(visible_data) == nil then visible_data = nil end
+      data.visible_data = visible_data
     end
   end
-  if string.find(flag, "e") and #target:getCardIds("e") > 0 then
+  if string.find(flag, "e") then
     local cards = table.filter(target:getCardIds("e"), function (id)
       return not table.contains(disable_ids, id)
     end)
@@ -845,7 +845,8 @@ Utility.askforCardsChosenFromAreas = function(chooser, target, flag, skill_name,
       table.insert(card_data, {"$Equip", cards})
     end
   end
-  if string.find(flag, "j") and #target:getCardIds("j") > 0 then
+  if string.find(flag, "j") then
+    --- TODO: 蓄谋可见性判断
     local cards = table.filter(target:getCardIds("j"), function (id)
       return not table.contains(disable_ids, id)
     end)
@@ -854,32 +855,35 @@ Utility.askforCardsChosenFromAreas = function(chooser, target, flag, skill_name,
     end
   end
   if #card_data == 0 then return {} end
-  local ret = chooser.room:askForPoxi(chooser, "askforCardsChosenFromAreas", card_data, nil, cancelable)
-  local result = table.filter(ret, function(id) return id ~= -1 end)
-  local hand_num = #ret - #result
-  if hand_num > 0 then
-    table.insertTable(result, table.random(target:getCardIds("h"), hand_num))
-  end
-  return result
+  local ret = chooser.room:askForPoxi(chooser, "askforCardsChosenFromAreas", card_data, data, cancelable)
+  return ret
 end
 
 Fk:addPoxiMethod{
   name = "askforCardsChosenFromAreas",
-  prompt = "#askforCardsChosenFromAreas",
-  card_filter = Util.TrueFunc,
-  feasible = function(selected, data)
-    if data and #data == #selected then
-      local areas = {}
+  prompt = function (data, extra_data)
+    if extra_data then
+      if extra_data.prompt then return extra_data.prompt end
+      if extra_data.skillName and extra_data.to then
+        return "#askforCardsChosenFromAreas::"..extra_data.to..":"..extra_data.skillName
+      end
+    end
+    return "askforCardsChosenFromAreas"
+  end,
+  card_filter = function (to_select, selected, data, extra_data)
+    if data and #selected < #data then
       for _, id in ipairs(selected) do
         for _, v in ipairs(data) do
-          if table.contains(v[2], id) then
-            table.insertIfNeed(areas, v[2])
-            break
+          if table.contains(v[2], id) and table.contains(v[2], to_select) then
+            return false
           end
         end
       end
-      return #areas == #selected
+      return true
     end
+  end,
+  feasible = function(selected, data)
+    return data and #data == #selected
   end,
   default_choice = function(data)
     if not data then return {} end
@@ -890,7 +894,7 @@ Fk:addPoxiMethod{
 
 Fk:loadTranslationTable{
   ["askforCardsChosenFromAreas"] = "选牌",
-  ["#askforCardsChosenFromAreas"] = "选择每个区域各一张牌",
+  ["#askforCardsChosenFromAreas"] = "%arg：选择 %dest 每个区域各一张牌",
 }
 
 --- 让玩家观看一些卡牌（用来取代fillAG式观看）。
