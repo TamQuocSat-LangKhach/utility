@@ -2193,30 +2193,20 @@ Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
   local room = self.room ---@class Room
   local logic = room.logic
   logic:trigger(fk.StartPindian, pindianData.from, pindianData)
+  local skillName = pindianData.reason or "pindian"
 
   if pindianData.reason ~= "" then
     room:sendLog{
       type = "#StartPindianReason",
       from = pindianData.from.id,
-      arg = pindianData.reason,
+      arg = skillName,
     }
   end
-
-  local extraData = {
-    num = 1,
-    min_num = 1,
-    include_equip = false,
-    pattern = ".",
-    reason = pindianData.reason,
-  }
-  local prompt = "#askForPindian:::" .. pindianData.reason
-  local data = { "choose_cards_skill", prompt, false, extraData }
 
   local targets = {}
   local moveInfos = {}
   if not pindianData.fromCard then
     table.insert(targets, pindianData.from)
-    pindianData.from.request_data = json.encode(data)
   else
     local _pindianCard = pindianData.fromCard
     local pindianCard = _pindianCard:clone(_pindianCard.suit, _pindianCard.number)
@@ -2253,22 +2243,40 @@ Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
       })
     else
       table.insert(targets, to)
-      to.request_data = json.encode(data)
     end
   end
 
-  room:notifyMoveFocus(targets, "AskForPindian")
-  room:doBroadcastRequest("AskForUseActiveSkill", targets)
+  local req = Request:new(targets, "AskForUseActiveSkill")
+  req.focus_text = skillName
+  local data = {
+    "choose_cards_skill",
+    "#askForPindian:::" .. skillName,
+    false,
+    {
+      num = 1,
+      min_num = 1,
+      include_equip = false,
+      skillName = skillName,
+      pattern = ".|.|.|hand",
+    },
+  }
 
   for _, p in ipairs(targets) do
-    local _pindianCard
-    if p.reply_ready then
-      local replyCard = json.decode(p.client_reply).card
-      _pindianCard = Fk:getCardById(json.decode(replyCard).subcards[1])
+    req:setData(p, data)
+    local cards = table.random(p:getCardIds("h"), 1)
+    req:setDefaultReply(p, cards)
+  end
+  req:ask()
+  local ret = {}
+  for _, p in ipairs(targets) do
+    local result = req:getResult(p)
+    local ids = {}
+    if result.card then
+      ids = json.decode(result.card).subcards
     else
-      _pindianCard = Fk:getCardById(p:getCardIds(Player.Hand)[1])
+      ids = result
     end
-
+    local _pindianCard = Fk:getCardById(ids[1])
     local pindianCard = _pindianCard:clone(_pindianCard.suit, _pindianCard.number)
     pindianCard:addSubcard(_pindianCard.id)
 
@@ -2325,11 +2333,19 @@ Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
     arg = winner == pindianData.from and "pindianwin" or "pindiannotwin",
     toast = true,
   }
-  if winner and winner ~= pindianData.from then
+  if winner then
+    if winner ~= pindianData.from then
+      room:sendLog{
+        type = "#ShowJointPindianWinner",
+        from = winner.id,
+        arg = "pindianwin",
+        toast = true,
+      }
+    end
+  else
     room:sendLog{
-      type = "#ShowJointPindianWinner",
-      from = winner.id,
-      arg = "pindianwin",
+      type = "#JointPindianNoWinner",
+      arg = skillName,
       toast = true,
     }
   end
@@ -2377,7 +2393,8 @@ end, function (self)
   if not self.interrupted then return end
 end)
 Fk:loadTranslationTable{
-  ["#ShowJointPindianWinner"] = "%from %arg",
+  ["#ShowJointPindianWinner"] = "%from 在共同拼点中 %arg",
+  ["#JointPindianNoWinner"] = "共同拼点 %arg 没有赢家",
 }
 --- 进行共同拼点。
 ---@param player ServerPlayer
