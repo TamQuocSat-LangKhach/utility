@@ -1273,7 +1273,7 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   for _, cid in ipairs(cards) do
     local card = Fk:getCardById(cid)
     if Exppattern:Parse(pattern):match(card) then
-      if card.skill:canUse(player, card, extra_data) and not player:prohibitUse(card) then
+      if Utility.getDefaultTargets(player, card, extra_data.bypass_times, extra_data.bypass_distances) then
         table.insert(cardIds, cid)
       end
     end
@@ -1294,7 +1294,7 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   if (not cancelable) and (not dat) then
     for _, cid in ipairs(cardIds) do
       local card = Fk:getCardById(cid)
-      local temp = Utility.getDefaultTargets(player, card, true, false)
+      local temp = Utility.getDefaultTargets(player, card, extra_data.bypass_times, extra_data.bypass_distances)
       if temp then
         dat = {targets = temp, cards = {cid}}
         break
