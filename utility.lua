@@ -1161,7 +1161,7 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
   local card, tos
   if dat then
     tos = dat.targets
-    card = Fk:cloneCard(dat.interaction or all_names[1])
+    card = Fk:cloneCard(#all_names == 1 and all_names[1] or dat.interaction)
     card:addSubcards(subcards)
     card.skillName = skillName
   else
@@ -1203,6 +1203,7 @@ local virtual_viewas = fk.CreateViewAsSkill{
     local card = Fk:cloneCard(name)
     if self.skillName then card.skillName = self.skillName end
     card:addSubcards(self.selected_subcards)
+    if Self:prohibitUse(card) then return nil end -- FIXME: 修复合法性判断后删除此段
     return card
   end,
 }
