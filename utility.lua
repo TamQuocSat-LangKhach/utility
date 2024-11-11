@@ -2088,7 +2088,7 @@ Fk:addGameEvent(Utility.DiscussionEvent, nil, function (self)
       if result ~= "" then
         local id
         if result.card then
-          id = json.decode(result.card).subcards[1]
+          id = result.card.subcards[1]
         else
           id = result[1]
         end
@@ -2273,7 +2273,7 @@ Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
     local result = req:getResult(p)
     local ids = {}
     if result.card then
-      ids = json.decode(result.card).subcards
+      ids = result.card.subcards
     else
       ids = result
     end
@@ -2440,7 +2440,7 @@ Utility.askForRaceDiscard = function (room, players, minNum, maxNum, includeEqui
   local toDiscard = {}
   if winner then
     local ret = json.decode(winner.client_reply)
-    toDiscard = json.decode(ret.card).subcards
+    toDiscard = ret.card.subcards
   end
   if winner and not skipDiscard then
     room:throwCard(toDiscard, skillName, winner, winner)
@@ -2652,7 +2652,7 @@ Utility.askForJointCard = function (players, minNum, maxNum, includeEquip, skill
     local result = req:getResult(p)
     if result ~= "" then
       if result.card then
-        ids = json.decode(result.card).subcards
+        ids = result.card.subcards
       else
         ids = result
       end
