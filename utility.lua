@@ -44,7 +44,7 @@ Utility.moveCardsHoldingAreaCheck = function(room, cards, end_id)
     end_id = move_event.id
   end
   local ret = table.simpleClone(cards)
-  Utility.getEventsByRule(room, GameEvent.MoveCards, 1, function (e)
+  room.logic:getEventsByRule(GameEvent.MoveCards, 1, function (e)
     for _, move in ipairs(e.data) do
       for _, info in ipairs(move.moveInfo) do
         table.removeOne(ret, info.cardId)
