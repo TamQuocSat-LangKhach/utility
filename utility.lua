@@ -2639,7 +2639,7 @@ Utility.askForJointCard = function (players, minNum, maxNum, includeEquip, skill
       end
       local exp = Exppattern:Parse(pattern)
       cards = table.filter(cards, function(cid)
-        return exp:match(Fk:getCardById(cid))
+        return exp:match(Fk:getCardById(cid)) and not (discard_skill and p:prohibitDiscard(cid))
       end)
       cards = table.random(cards, minNum)
       req:setDefaultReply(p, cards)
