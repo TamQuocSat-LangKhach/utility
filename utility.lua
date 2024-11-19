@@ -171,12 +171,10 @@ Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distance
   if min_target_num == 0 then return {} end -- for AOE trick, ex_nihilo, peach...
   local real_tos
   if min_target_num == 2 then  -- for collateral, diversion...
-    Self = player -- for targetFilter check
     for _, first_id in ipairs(tos) do
       local seconds = {}
-      local first = room:getPlayerById(first_id)
-      for _, second in ipairs(room:getOtherPlayers(first)) do
-        if card.skill:targetFilter(second.id, {first_id}, {}, card) then
+      for _, second in ipairs(room.alive_players) do
+        if second.id ~= first_id and card.skill:modTargetFilter(second.id, {first_id}, player.id, card, not bypass_distances) then
           table.insert(seconds, second.id)
         end
       end
