@@ -2609,8 +2609,35 @@ Utility.askForJointCard = function (players, minNum, maxNum, includeEquip, skill
   pattern = pattern or "."
   prompt = prompt or ("#AskForCard:::" .. maxNum .. ":" .. minNum)
 
-  local req = Request:new(players, "AskForUseActiveSkill")
+  local toAsk = {}
+  local ret = {}
+  if cancelable then
+    toAsk = players
+  else
+    for _, p in ipairs(players) do
+      local cards = p:getCardIds("he&")
+      if type(expand_pile) == "string" then
+        table.insertTable(cards, p:getPile(expand_pile))
+      elseif type(expand_pile) == "table" then
+        table.insertTable(cards, expand_pile)
+      end
+      local exp = Exppattern:Parse(pattern)
+      cards = table.filter(cards, function(cid)
+        return exp:match(Fk:getCardById(cid)) and not (discard_skill and p:prohibitDiscard(cid))
+      end)
+      if #cards > minNum then
+        table.insert(toAsk, p)
+      end
+      ret[p.id] = table.random(cards, minNum)
+    end
+    if #toAsk == 0 then
+      return ret
+    end
+  end
+
+  local req = Request:new(toAsk, "AskForUseActiveSkill")
   req.focus_text = skillName
+  req.focus_players = players
   local data = {
     discard_skill and "discard_skill" or "choose_cards_skill",
     prompt,
@@ -2624,28 +2651,13 @@ Utility.askForJointCard = function (players, minNum, maxNum, includeEquip, skill
       expand_pile = expand_pile,
     },
   }
-  for _, p in ipairs(players) do
+
+  for _, p in ipairs(toAsk) do
     req:setData(p, data)
-    if cancelable then
-      req:setDefaultReply(p, {})
-    else
-      local cards = p:getCardIds("he&")
-      if type(expand_pile) == "string" then
-        table.insertTable(cards, p:getPile(expand_pile))
-      elseif type(expand_pile) == "table" then
-        table.insertTable(cards, expand_pile)
-      end
-      local exp = Exppattern:Parse(pattern)
-      cards = table.filter(cards, function(cid)
-        return exp:match(Fk:getCardById(cid)) and not (discard_skill and p:prohibitDiscard(cid))
-      end)
-      cards = table.random(cards, minNum)
-      req:setDefaultReply(p, cards)
-    end
+    req:setDefaultReply(p, ret[p.id] or {})
   end
   req:ask()
-  local ret = {}
-  for _, p in ipairs(players) do
+  for _, p in ipairs(toAsk) do
     local ids = {}
     local result = req:getResult(p)
     if result ~= "" then
