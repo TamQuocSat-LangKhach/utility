@@ -2494,7 +2494,7 @@ Fk:loadTranslationTable{
 Utility.CardNameBox = function(spec)
   spec.choices = type(spec.choices) == "table" and spec.choices or Util.DummyTable
   spec.all_choices = type(spec.all_choices) == "table" and spec.all_choices or spec.choices
-  spec.default_choice = spec.choices[1]
+  spec.default_choice = spec.default_choice and spec.default_choice or spec.choices[1]
   spec.type = "custom"
   spec.qml_path = "packages/utility/qml/SkillCardName"
   return spec
