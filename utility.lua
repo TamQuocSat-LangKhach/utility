@@ -10,7 +10,7 @@ local Utility = require 'packages/utility/_base'
 -- 在指定历史范围中找符合条件的事件（逆序）
 ---@param room Room
 ---@param eventType GameEvent @ 要查找的事件类型
----@param func fun(e: GameEvent): boolean @ 过滤用的函数
+---@param func fun(e: GameEvent): boolean? @ 过滤用的函数
 ---@param n integer @ 最多找多少个
 ---@param end_id integer @ 查询历史范围：从最后的事件开始逆序查找直到id为end_id的事件（不含）
 ---@return GameEvent[] @ 找到的符合条件的所有事件，最多n个但不保证有n个
@@ -2171,7 +2171,8 @@ Utility.Discussion = function(player, tos, reason, extra_data)
     reason = reason or "AskForDiscussion",
     extra_data = extra_data or {},
   }
-  local event = GameEvent:new(Utility.DiscussionEvent, discussionData)
+  local event = GameEvent[Utility.DiscussionEvent]:create(discussionData)
+  -- local event = GameEvent:new(Utility.DiscussionEvent, discussionData)
   local _, ret = event:exec()
   return discussionData
 end
@@ -2403,7 +2404,8 @@ Fk:loadTranslationTable{
 ---@return JointPindianStruct
 Utility.jointPindian = function(player, tos, skillName, initialCard)
   local pindianData = { from = player, tos = tos, reason = skillName, fromCard = initialCard, results = {}, winner = nil }
-  local event = GameEvent:new(Utility.JointPindianEvent, pindianData)
+  local event = GameEvent[Utility.JointPindianEvent]:create(pindianData)
+  -- local event = GameEvent:new(Utility.JointPindianEvent, pindianData)
   local _, ret = event:exec()
   return pindianData
 end
