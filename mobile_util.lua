@@ -45,14 +45,23 @@ Utility.doStrategy = function(room, from, to, from_choices, to_choices, skillNam
   elseif type(prompts) == "string" then
     prompts = {prompts, prompts}
   end
-  local data1 = json.encode({ from_choices, from_choices, skillName, prompts[1], true })
-  from.request_data = data1
-  local data2 = json.encode({ to_choices, to_choices, skillName, prompts[2], true })
-  to.request_data = data2
-  room:notifyMoveFocus({from,to}, "AskForChoice")
-  room:doBroadcastRequest("AskForChoice", {from,to})
-  local from_c = from.reply_ready and from.client_reply or table.random(from_choices)
-  local to_c = to.reply_ready and to.client_reply or table.random(to_choices)
+  -- local data1 = json.encode({ from_choices, from_choices, skillName, prompts[1], true })
+  -- from.request_data = data1
+  -- local data2 = json.encode({ to_choices, to_choices, skillName, prompts[2], true })
+  -- to.request_data = data2
+  -- room:notifyMoveFocus({from,to}, "AskForChoice")
+  -- room:doBroadcastRequest("AskForChoice", {from,to})
+  -- local from_c = from.reply_ready and from.client_reply or table.random(from_choices)
+  -- local to_c = to.reply_ready and to.client_reply or table.random(to_choices)
+  local req = Request:new({from, to}, "AskForChoice")
+  req:setData(from, { from_choices, from_choices, skillName, prompts[1], true })
+  req:setData(to, { to_choices, to_choices, skillName, prompts[2], true })
+  req:setDefaultReply(from, table.random(from_choices, 1))
+  req:setDefaultReply(to, table.random(to_choices, 1))
+  req.focus_text = skillName
+  req.receive_decode = false
+  local from_c = req:getResult(from)
+  local to_c = req:getResult(to)
   local same = (table.indexOf(from_choices, from_c) == table.indexOf(to_choices, to_c))
   if msg_type == 1 then
     room:sendLog{
