@@ -2171,7 +2171,8 @@ Utility.Discussion = function(player, tos, reason, extra_data)
     reason = reason or "AskForDiscussion",
     extra_data = extra_data or {},
   }
-  local event = GameEvent:new(Utility.DiscussionEvent, discussionData)
+  local event = GameEvent[Utility.DiscussionEvent]:create(discussionData)
+  -- local event = GameEvent:new(Utility.DiscussionEvent, discussionData)
   local _, ret = event:exec()
   return discussionData
 end
