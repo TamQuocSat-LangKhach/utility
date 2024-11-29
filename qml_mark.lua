@@ -27,6 +27,21 @@ Fk:addQmlMark{
     return Fk:translate(ret)
   end,
 }
+-- 记录多名角色，点击查看（若后继以$开头则仅自己可见）
+-- 传入值：角色ID
+Fk:addQmlMark{
+  name = "player",
+  how_to_show = function(_, value)
+    if type(value) ~= "table" then return " " end
+    return tostring(#value)
+  end,
+  qml_path = function(name, value, p)
+    if string.startsWith(name, "@[player]$") or Self:isBuddy(p) then
+      return "packages/utility/qml/PlayerBox"
+    end
+    return ""
+  end,
+}
 -- 在脸上显示类别
 -- 传入值：card type数组（不是card string）
 Fk:addQmlMark{
