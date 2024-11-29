@@ -27,7 +27,7 @@ Fk:addQmlMark{
     return Fk:translate(ret)
   end,
 }
--- 记录多名角色，点击查看（若后继以$开头则仅自己可见）
+-- 记录多名角色，脸上显示数量，点击查看角色信息（若后继以$开头则仅自己可见）
 -- 传入值：角色ID
 Fk:addQmlMark{
   name = "player",
@@ -36,7 +36,7 @@ Fk:addQmlMark{
     return tostring(#value)
   end,
   qml_path = function(name, value, p)
-    if string.startsWith(name, "@[player]$") or Self:isBuddy(p) then
+    if Self:isBuddy(p) or not string.startsWith(name, "@[player]$") then
       return "packages/utility/qml/PlayerBox"
     end
     return ""
