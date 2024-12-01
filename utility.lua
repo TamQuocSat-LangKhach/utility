@@ -148,14 +148,14 @@ Utility.canTransferTarget = function(target, data, distance_limited)
 end
 
 
--- 获得一名角色使用一张牌的默认目标。用于强制使用此牌时的默认值。
----@param player ServerPlayer @ 使用者
+--- 获得一名角色使用一张牌的默认目标。用于强制使用此牌（模拟出牌空闲时使用，如滕胤陈见）时的默认值。
+---@param player Player @ 使用者
 ---@param card Card @ 使用的牌
 ---@param bypass_times? boolean @ 是否无次数限制。默认受限制
 ---@param bypass_distances? boolean @ 是否无距离限制。默认受限制
----@return table<integer>? @ 返回表，元素为目标角色的id。返回空则为没有合法目标
+---@return table<integer>? @ 返回表，元素为目标角色的id。返回nil则为没有合法目标，返回空表即代表此牌不能手动选择目标
 Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distances)
-  local room = player.room
+  local room = Fk:currentRoom()
   local canUse = card.skill:canUse(player, card, { bypass_times = bypass_times, bypass_distances = bypass_distances }) and not player:prohibitUse(card)
   if not canUse then return end
   local tos = {}
