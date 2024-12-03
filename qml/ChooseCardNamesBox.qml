@@ -22,7 +22,7 @@ GraphicsBox {
 
   title.text: Util.processPrompt(prompt)
   width: 600
-  height: Math.min(300, 40 * (Math.ceil(all_names.length / 7))) + 100
+  height: Math.min(200, 40 * (Math.ceil(all_names.length / 7))) + title.height + 50
 
 
   Flickable {
