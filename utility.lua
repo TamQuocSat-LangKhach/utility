@@ -57,8 +57,8 @@ end
 
 --因执行牌的效果而对一名角色造成伤害，即通常描述的使用牌对目标角色造成伤害
 ---@param room Room
----@param by_user? bool @ 进一步判定使用者和来源是否一致（默认为true）
----@return bool
+---@param by_user boolean? @ 进一步判定使用者和来源是否一致（默认为true）
+---@return boolean?
 Utility.damageByCardEffect = function(room, by_user)
   fk.qWarning("Utility.damageByCardEffect is deprecated! Use GameLogic:damageByCardEffect instead")
   by_user = (by_user == nil) and true or by_user
@@ -79,7 +79,7 @@ end
 ---@param player ServerPlayer @ 使用来源
 ---@param card Card @ 被使用的卡牌
 ---@param times_limited? boolean @ 是否有次数限制
----@return bool
+---@return boolean?
 Utility.canUseCard = function(room, player, card, times_limited)
   if player:prohibitUse(card) then return false end
   local can_use = card.skill:canUse(player, card, { bypass_times = not times_limited })
@@ -93,7 +93,7 @@ end
 ---@param card Card @ 被使用的卡牌
 ---@param distance_limited? boolean @ 是否有距离关系的限制
 ---@param times_limited? boolean @ 是否有次数限制
----@return bool
+---@return boolean?
 Utility.canUseCardTo = function(room, from, to, card, distance_limited, times_limited)
   if from:prohibitUse(card) or from:isProhibited(to, card) then return false end
   local can_use = card.skill:canUse(from, card, { bypass_times = not times_limited, bypass_distances = not distance_limited })
@@ -606,7 +606,7 @@ end
 ---@param player ServerPlayer @ 要被获取标记的那个玩家
 ---@param name string @ 标记名称（不带前缀）
 ---@param value any @ 标记实际值
----@param visible? bool @ 是否公开标记
+---@param visible? boolean? @ 是否公开标记
 Utility.setXianfuMark = function(player, name, value, visible)
   local mark = player:getMark("@[xianfu]" .. name)
   if value == nil or value == 0 then
@@ -1530,7 +1530,7 @@ end
 
 --将数字转换为汉字，或将汉字转换为数字
 ---@param value number | string @ 数字或汉字
----@param to_num bool @ 是否转换为数字
+---@param to_num boolean? @ 是否转换为数字
 ---@return number | string @ 结果
 Utility.ConvertNumber = function(value, to_num)
   local ret = "" ---@type number | string
