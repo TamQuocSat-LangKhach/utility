@@ -218,7 +218,35 @@ local AfterRenMove = fk.CreateTriggerSkill{
 Fk:addSkill(AfterRenMove)
 
 
-
+--- 从移动事件数据中获得一名角色失去的牌数。由于手杀服规，使用装备牌不算失去装备，需要排除
+---@param player ServerPlayer
+---@param data table
+---@return integer[] @ 失去的牌
+Utility.getLostCardsFromMove = function(player, data)
+  local equipUsing = {}
+  local parentUseData = player.room.logic:getCurrentEvent():findParent(GameEvent.UseCard)
+  if parentUseData then
+    local use = parentUseData.data[1]
+    if use.card.type == Card.TypeEquip and use.from == player.id then
+      equipUsing = Card:getIdList(use.card)
+    end
+  end
+  local ids = {}
+  for _, move in ipairs(data) do
+    for _, info in ipairs(move.moveInfo) do
+      if not table.contains(equipUsing, info.cardId) then
+        if move.from == player.id and (info.fromArea == Card.PlayerHand or info.fromArea == Card.PlayerEquip) then
+          table.insert(ids, info.cardId)
+        end
+      else
+        if (move.to ~= player.id or move.toArea ~= Card.PlayerEquip) and info.fromArea == Card.Processing then
+          table.insert(ids, info.cardId)
+        end
+      end
+    end
+  end
+  return ids
+end
 
 
 
