@@ -14,6 +14,7 @@ local Utility = require 'packages/utility/_base'
 ---@param n integer @ 最多找多少个
 ---@param end_id integer @ 查询历史范围：从最后的事件开始逆序查找直到id为end_id的事件（不含）
 ---@return GameEvent[] @ 找到的符合条件的所有事件，最多n个但不保证有n个
+---@deprecated
 Utility.getEventsByRule = function(room, eventType, n, func, end_id)
   fk.qWarning("Utility.getEventsByRule is deprecated! Use GameLogic:getEventsByRule instead")
   local ret = {}
@@ -59,6 +60,7 @@ end
 ---@param room Room
 ---@param by_user boolean? @ 进一步判定使用者和来源是否一致（默认为true）
 ---@return boolean?
+---@deprecated
 Utility.damageByCardEffect = function(room, by_user)
   fk.qWarning("Utility.damageByCardEffect is deprecated! Use GameLogic:damageByCardEffect instead")
   by_user = (by_user == nil) and true or by_user
@@ -106,6 +108,7 @@ end
 ---@param bypass_distances boolean? @ 是否无距离关系的限制
 ---@param use_AimGroup boolean? @ 某些场合需要使用AimGroup，by smart Ho-spair
 ---@return integer[] @ 返回满足条件的player的id列表
+---@deprecated
 Utility.getUseExtraTargets = function(room, data, bypass_distances, use_AimGroup)
   fk.qWarning("Utility.getUseExtraTargets is deprecated! Use Room:getUseExtraTargets instead")
   if not (data.card.type == Card.TypeBasic or data.card:isCommonTrick()) then return {} end
@@ -554,6 +557,7 @@ end
 ---@param player Player @ 要被获取标记的那个玩家
 ---@param mark string @ 标记
 ---@return table
+---@deprecated
 Utility.getMark = function(player, mark)
   fk.qWarning("Utility.getMark is deprecated! Use Player:getTableMark instead")
   return type(player:getMark(mark)) == "table" and player:getMark(mark) or {}
@@ -939,6 +943,7 @@ Fk:loadTranslationTable{
 ---@param proposer? integer @ 操作者的id。默认为空
 ---@param skillName? string @ 技能名。默认为“分配”
 ---@return integer[][] @ 返回成功分配的卡牌
+---@deprecated
 Utility.doDistribution = function (room, list, proposer, skillName)
   fk.qWarning("Utility.doDistribution is deprecated! Use Room:doYiji instead")
   skillName = skillName or "distribution_skill"
@@ -1009,6 +1014,7 @@ end
 ---@param skipMove? boolean @ 是否跳过移动。默认不跳过
 ---@param single_max? integer|table @ 限制每人能获得的最大牌数。输入整数或(以角色id为键以整数为值)的表
 ---@return table<string, integer[]> @ 返回一个表，键为取整后字符串化的角色id，值为分配给其的牌
+---@deprecated
 Utility.askForDistribution = function(player, cards, targets, skillName, minNum, maxNum, prompt, expand_pile, skipMove, single_max)
   fk.qWarning("Utility.askForDistribution is deprecated! Use Room:askForYiji instead")
   local room = player.room
@@ -1390,6 +1396,7 @@ Fk:loadTranslationTable{
 ---@param player Player @ 玩家
 ---@param realGender? boolean @ 是否获取真实性别，无视双性人。默认否
 ---@return boolean
+---@deprecated
 Utility.isMale = function(player, realGender)
   fk.qWarning("Utility.isMale is deprecated! Use Player.isMale instead")
   return player.gender == General.Male or (not realGender and player.gender == General.Bigender)
@@ -1400,6 +1407,7 @@ end
 ---@param player Player @ 玩家
 ---@param realGender? boolean @ 是否获取真实性别，无视双性人。默认否
 ---@return boolean
+---@deprecated
 Utility.isFemale = function(player, realGender)
   fk.qWarning("Utility.isFemale is deprecated! Use Player.isFemale instead")
   return player.gender == General.Female or (not realGender and player.gender == General.Bigender)
@@ -1660,6 +1668,7 @@ local global_slash_targetmod = fk.CreateTargetModSkill{
 Fk:addSkill(global_slash_targetmod)
 
 --- 获取实际的伤害事件
+---@deprecated
 Utility.getActualDamageEvents = function(room, n, func, scope, end_id)
   fk.qWarning("Utility.getActualDamageEvents is deprecated! Use GameLogic.getActualDamageEvents instead")
   if not end_id then
@@ -1842,6 +1851,7 @@ end
 ---@param cancelable? boolean @ 能否点取消
 ---@param no_indicate? boolean @ 是否不显示指示线
 ---@return integer[], integer[]
+---@deprecated
 function Utility.askForChooseCardsAndPlayers(self, player, minCardNum, maxCardNum, targets, minTargetNum, maxTargetNum, pattern, prompt, skillName, cancelable, no_indicate)
   fk.qWarning("Utility.askForChooseCardsAndPlayers is deprecated. Use Room:askForChooseCardsAndPlayers instead.")
   return self:askForChooseCardsAndPlayers(player, minCardNum, maxCardNum, targets, minTargetNum, maxTargetNum, pattern, prompt, skillName, cancelable, no_indicate)
