@@ -2026,6 +2026,7 @@ end
 ---@param cards integer[] @ 待清理的卡牌
 ---@param skillName? string @ 技能名
 Utility.clearRemainCards = function(room, cards, skillName)
+  fk.qWarning("Utility.clearRemainCards is deprecated! Use Room:cleanProcessingArea instead")
   cards = table.filter(cards, function(id) return room:getCardArea(id) == Card.Processing end)
   if #cards > 0 then
     room:moveCardTo(cards, Card.DiscardPile, nil, fk.ReasonJustMove, skillName)
