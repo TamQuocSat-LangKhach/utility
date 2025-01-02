@@ -97,6 +97,7 @@ end
 ---@param times_limited? boolean @ 是否有次数限制
 ---@return boolean?
 Utility.canUseCardTo = function(room, from, to, card, distance_limited, times_limited)
+  fk.qWarning("Utility.canUseCardTo is deprecated! Use Player:canUseTo instead")
   if from:prohibitUse(card) or from:isProhibited(to, card) then return false end
   local can_use = card.skill:canUse(from, card, { bypass_times = not times_limited, bypass_distances = not distance_limited })
   return can_use and card.skill:modTargetFilter(to.id, {}, from.id, card, distance_limited)
@@ -2787,6 +2788,97 @@ Fk:addTargetTip{
 Fk:loadTranslationTable{
   ["@@AddTarget"] = "增加目标",
   ["@@CancelTarget"] = "取消目标",
+}
+
+
+
+--- 从多种规则中选择一种并选牌
+---@param player ServerPlayer @ 被询问的玩家
+---@param patterns table @ 选牌规则组。格式{{规则，选牌下限，选牌上限，提示名},{},...}
+---@param skillName? string @ 技能名
+---@param cancelable? boolean @ 能否点取消。默认可以
+---@param prompt? string @ 提示信息
+---@param extra_data? table @ 额外信息。可以选择"expand_pile"|"discard_skill"
+---@return integer[], string @ 返回选择的牌，和选择的规则提示名
+Utility.askForCardByMultiPatterns = function (player, patterns, skillName, cancelable, prompt, extra_data)
+  skillName = skillName or "choose_cards_mutlipat_skill"
+  cancelable = (cancelable == nil) or cancelable
+  prompt = prompt or "#askForCardByMultiPatterns"
+  extra_data = extra_data or {}
+  local aval_cards = player:getCardIds("he")
+  if type(extra_data.expand_pile) == "string" then
+    table.insertTable(aval_cards, player:getPile(extra_data.expand_pile))
+  elseif type(extra_data.expand_pile) == "table" then
+    table.insertTable(aval_cards, extra_data.expand_pile)
+  end
+  if extra_data.discard_skill then
+    aval_cards = table.filter(aval_cards, function(cid)
+      return not player:prohibitDiscard(cid)
+    end)
+  end
+  local aval_cardlist = {}
+  for _, v in ipairs(patterns) do
+    table.insert(aval_cardlist, table.filter(aval_cards, function(cid)
+      return Exppattern:Parse(v[1]):match(Fk:getCardById(cid))
+    end))
+  end
+
+  if cancelable or table.find(patterns, function(v, i)
+    return #aval_cardlist[i] >= v[2] and #aval_cardlist[i] <= v[3]
+  end) then
+    extra_data.skillName = skillName
+    extra_data.patterns = patterns
+    local success, dat = player.room:askForUseActiveSkill(player, "choose_cards_mutlipat_skill", prompt, cancelable, extra_data)
+    if dat then
+      return dat.cards, dat.interaction
+    elseif cancelable then
+      return {}, ""
+    end
+  end
+
+  for i, v in ipairs(patterns) do
+    if #aval_cardlist[i] >= v[2] and #aval_cardlist[i] <= v[3] then
+      return aval_cardlist[i], v[4]
+    end
+  end
+
+  return {}, ""
+end
+
+local choose_cards_mutlipat_skill = fk.CreateActiveSkill{
+  name = "choose_cards_mutlipat_skill",
+  interaction = function(self)
+    local patterns = self.patterns
+    if not patterns then return end
+    return {choices = table.map(patterns, function(v, i) return v[4] end) }
+  end,
+  card_filter = function(self, to_select, selected)
+    local patterns, choice = self.patterns, self.interaction.data
+    if not patterns or not choice then return end
+    if self.discard_skill or Self:prohibitDiscard(to_select) then return end
+    for _, v in ipairs(patterns) do
+      if v[4] == choice then
+        return #selected < v[3] and Exppattern:Parse(v[1]):match(Fk:getCardById(to_select))
+      end
+    end
+  end,
+  target_filter = Util.FalseFunc,
+  feasible = function(self, _, cards)
+    local patterns, choice = self.patterns, self.interaction.data
+    if not patterns or not choice then return end
+    for _, v in ipairs(patterns) do
+      if v[4] == choice then
+        return #cards <= v[3] and #cards >= v[2]
+      end
+    end
+  end,
+}
+Fk:addSkill(choose_cards_mutlipat_skill)
+
+
+Fk:loadTranslationTable{
+  ["choose_cards_mutlipat_skill"] = "选牌",
+  ["#askForCardByMultiPatterns"] = "选牌",
 }
 
 
