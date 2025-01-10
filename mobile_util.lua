@@ -94,127 +94,125 @@ Fk:loadTranslationTable{
 
 -- 仁区相关
 
-local afterRenMove = fk.CreateTriggerSkill{
-  name = "#AfterRenMove",
-  priority = 0.001,
-
-  refresh_events = {fk.AfterCardsMove},
-  can_refresh = function(self, event, target, player, data)
-    if player.seat == 1 and player.room.tag["ren"] then
+local RenPileTrigger = fk.CreateTriggerSkill{
+  name = "#RenPileTrigger",
+  priority = 1.001,
+  mute = true,
+  events = {fk.AfterCardsMove},
+  can_trigger = function(self, event, target, player, data)
+    local renpile = Utility.GetRenPile(player.room)
+    if player.seat == 1 then
       for _, move in ipairs(data) do
-        if move.toArea ~= Card.Void then
-          for _, info in ipairs(move.moveInfo) do
-            if table.contains(player.room.tag["ren"], info.cardId) then
-              return true
-            end
-          end
+        if move.toArea == Card.Void and move.extra_data and move.extra_data.addtorenpile then
+          return true
+        end
+        if table.find(move.moveInfo, function(info) return table.contains(renpile, info.cardId) end) then
+          return true
         end
       end
     end
   end,
-  on_refresh = function(self, event, target, player, data)
+  on_cost = Util.TrueFunc,
+  on_use = function(self, event, target, player, data)
     local room = player.room
+    local renpile = Utility.GetRenPile(room)
     for _, move in ipairs(data) do
-      if move.toArea ~= Card.Void then
-        for _, info in ipairs(move.moveInfo) do
-          if table.contains(room.tag["ren"], info.cardId) then
-            Utility.NotifyRenPile(room)
-            room.logic:trigger("fk.AfterRenMove", nil, info)
-          end
+      local removed
+      for _, info in ipairs(move.moveInfo) do
+        if table.contains(renpile, info.cardId) then
+          table.removeOne(renpile, info.cardId)
+          removed = true
         end
       end
+      if removed then
+        move.extra_data = move.extra_data or {}
+        move.extra_data.removefromrenpile = true
+      end
+      if move.toArea == Card.Void and move.extra_data and move.extra_data.addtorenpile then
+        local add = {}
+        for _, info in ipairs(move.moveInfo) do
+          if room:getCardArea(info.cardId) == Card.Void then
+            table.insert(add, info.cardId)
+          end
+        end
+        if #add > 0 then
+          room:sendLog{
+            type = "#AddToRenPile",
+            arg = move.skillName,
+            card = add,
+          }
+          table.insertTableIfNeed(renpile, add)
+        end
+      end
+    end
+    room:setBanner("@$RenPile", renpile)
+    local ren_limit = 6
+    if #renpile > ren_limit then
+      local removeIds = table.slice(renpile, 1, #renpile - ren_limit + 1)
+      room:sendLog{
+        type = "#OverflowFromRenPile",
+        card = removeIds,
+      }
+      room:moveCardTo(removeIds, Card.DiscardPile, nil, fk.ReasonPutIntoDiscardPile, "ren_overflow", nil, true)
     end
   end,
 }
-Fk:addSkill(afterRenMove)
+Fk:addSkill(RenPileTrigger)
 
+--- 获取仁区中的牌
 ---@param room Room @ 房间
 ---@return integer[]
 Utility.GetRenPile = function(room)
-  local cards = room.tag["ren"] or {}
-  room.tag["ren"] = table.filter(cards, function (id)
-    return room:getCardArea(id) == Card.Void
-  end)
-  return table.simpleClone(room.tag["ren"])
+  local cards = room:getBanner("@$RenPile")
+  if cards == nil then
+    room:setBanner("@$RenPile", cards)
+    return {}
+  end
+  return table.simpleClone(cards)
 end
 
----@param room Room @ 房间
-Utility.NotifyRenPile = function(room)
-  room:sendLog{
-    type = "#NotifyRenPile",
-    arg = #Utility.GetRenPile(room),
-    card = Utility.GetRenPile(room),
-  }
-  room:setBanner("@$RenPile", table.simpleClone(room.tag["ren"]))
-end
 
+--- 将一些牌加入仁区
 ---@param room Room @ 房间
----@param card integer|integer[]|Card|Card[] @ 要加入仁区的牌/id/intList
+---@param card integer|integer[]|Card|Card[] @ 要加入仁区的牌
 ---@param skillName string @ 移动的技能名
 ---@param proposer integer @ 移动操作者的id
 Utility.AddToRenPile = function(room, card, skillName, proposer)
-  room.logic:addTriggerSkill(AfterRenMove)
+  room.logic:addTriggerSkill(RenPileTrigger)
   local ids = Card:getIdList(card)
-  room.tag["ren"] = room.tag["ren"] or {}
-  local add, remove = {}, {}
-  local ren_cards = table.simpleClone(room.tag["ren"])
-  local ren_limit = 6
-  for i = 1, ren_limit do
-    local id = ids[i]
-    if not id then break end
-    table.insert(ren_cards, id)
-    table.insert(add, id)
-  end
-  if #ren_cards > ren_limit then
-    for i = #ren_cards - ren_limit, 1, -1 do
-      table.insert(remove, table.remove(room.tag["ren"], i))
+
+  local movesSplitedByOwner = {}
+  for _, cardId in ipairs(ids) do
+    local moveFound = table.find(movesSplitedByOwner, function(move)
+      return move.from == room.owner_map[cardId]
+    end)
+
+    if moveFound then
+      table.insert(moveFound.ids, cardId)
+    else
+      table.insert(movesSplitedByOwner, {
+        ids = { cardId },
+        from = room.owner_map[cardId],
+        toArea = Card.Void,
+        moveReason = fk.ReasonJustMove,
+        skillName = skillName,
+        moveVisible = true,
+        proposer = proposer,
+        extra_data = { addtorenpile = true},
+      })
     end
   end
-  local moveInfos = {}
-  if #add > 0 then
-    table.insertTable(room.tag["ren"], add)
-    table.insert(moveInfos, {
-      ids = add,
-      from = room.owner_map[add[1]],
-      toArea = Card.Void,
-      moveReason = fk.ReasonJustMove,
-      skillName = skillName,
-      moveVisible = true,
-      proposer = proposer,
-    })
-    room:sendLog{
-      type = "#AddToRenPile",
-      arg = #add,
-      card = add,
-    }
-  end
-  if #remove > 0 then
-    local info = {
-      ids = remove,
-      toArea = Card.DiscardPile,
-      moveReason = fk.ReasonPutIntoDiscardPile,
-      skillName = "ren_overflow",
-      moveVisible = true,
-    }
-    table.insert(moveInfos, info)
-    room:sendLog{
-      type = "#OverflowFromRenPile",
-      arg = #remove,
-      card = remove,
-    }
-  end
-  if #moveInfos > 0 then
-    room:moveCards(table.unpack(moveInfos))
-  end
-  Utility.NotifyRenPile(room)
+
+  room:moveCards(table.unpack(movesSplitedByOwner))
 end
 
 Fk:loadTranslationTable{
-  ["#NotifyRenPile"] = "“仁”区现有 %arg 张牌 %card",
-  ["#AddToRenPile"] = "%arg 张牌被移入“仁”区 %card",
-  ["#OverflowFromRenPile"] = "%arg 张牌从“仁”区溢出 %card",
+  ["#AddToRenPile"] = "%card 因%arg 移入“仁”区",
+  ["#OverflowFromRenPile"] = "%card 从“仁”区溢出",
   ["$RenPile"] = "仁区",
   ["@$RenPile"] = "仁区",
+  ["RenPile_href"] = "仁区是一个存于场上，用于存放牌的公共区域。<br>仁区中的牌上限为6张，当仁区中的牌超过6张时，最先置入仁区中的牌将置入弃牌堆。",
+  ["#RenPileTrigger"] = "仁区",
 }
 
 -- 整肃相关
