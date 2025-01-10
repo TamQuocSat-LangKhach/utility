@@ -96,6 +96,7 @@ end
 ---@param distance_limited? boolean @ 是否有距离关系的限制
 ---@param times_limited? boolean @ 是否有次数限制
 ---@return boolean?
+---@deprecated
 Utility.canUseCardTo = function(room, from, to, card, distance_limited, times_limited)
   fk.qWarning("Utility.canUseCardTo is deprecated! Use Player:canUseTo instead")
   if from:prohibitUse(card) or from:isProhibited(to, card) then return false end
@@ -1086,7 +1087,7 @@ Utility.askForDistribution = function(player, cards, targets, skillName, minNum,
     end
   end
   if not skipMove then
-    Utility.doDistribution(room, list, player.id, skillName)
+    room:doYiji(list, player.id, skillName)
   end
 
   return list
@@ -2026,6 +2027,7 @@ end
 ---@param room Room @ 房间
 ---@param cards integer[] @ 待清理的卡牌
 ---@param skillName? string @ 技能名
+---@deprecated
 Utility.clearRemainCards = function(room, cards, skillName)
   fk.qWarning("Utility.clearRemainCards is deprecated! Use Room:cleanProcessingArea instead")
   cards = table.filter(cards, function(id) return room:getCardArea(id) == Card.Processing end)
