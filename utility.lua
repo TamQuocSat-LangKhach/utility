@@ -137,15 +137,16 @@ end
 ---@return boolean
 Utility.canTransferTarget = function(target, data, distance_limited)
   local room = target.room
-  if room:getPlayerById(data.from):isProhibited(target, data.card) or
-  not data.card.skill:modTargetFilter(target.id, {}, data.from, data.card, distance_limited) then return false end
+  local from = room:getPlayerById(data.from)
+  if from:isProhibited(target, data.card) or
+  not data.card.skill:modTargetFilter(target.id, {}, from, data.card, distance_limited) then return false end
 
   --target_filter check, for collateral,diversion...
   local ho_spair_target = data.subTargets
   if type(ho_spair_target) == "table" then
     local passed_target = {target.id}
     for _, c_pid in ipairs(ho_spair_target) do
-      if not data.card.skill:modTargetFilter(c_pid, passed_target, data.from, data.card, distance_limited) then return false end
+      if not data.card.skill:modTargetFilter(c_pid, passed_target, from, data.card, distance_limited) then return false end
       table.insert(passed_target, c_pid)
     end
   end
