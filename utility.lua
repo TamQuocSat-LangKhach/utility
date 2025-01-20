@@ -88,21 +88,6 @@ Utility.canUseCard = function(room, player, card, times_limited)
   return can_use
 end
 
--- 一名角色A对角色B使用牌的合法性检测
----@param room Room
----@param from ServerPlayer @ 使用来源
----@param to ServerPlayer @ 目标角色
----@param card Card @ 被使用的卡牌
----@param distance_limited? boolean @ 是否有距离关系的限制
----@param times_limited? boolean @ 是否有次数限制
----@return boolean?
----@deprecated
-Utility.canUseCardTo = function(room, from, to, card, distance_limited, times_limited)
-  fk.qWarning("Utility.canUseCardTo is deprecated! Use Player:canUseTo instead")
-  if from:prohibitUse(card) or from:isProhibited(to, card) then return false end
-  local can_use = card.skill:canUse(from, card, { bypass_times = not times_limited, bypass_distances = not distance_limited })
-  return can_use and card.skill:modTargetFilter(to.id, {}, from.id, card, distance_limited)
-end
 
 -- 获取使用牌的合法额外目标（【借刀杀人】等带副目标的卡牌除外）
 ---@param room Room
@@ -119,7 +104,7 @@ Utility.getUseExtraTargets = function(room, data, bypass_distances, use_AimGroup
   local current_targets = use_AimGroup and AimGroup:getAllTargets(data.tos) or TargetGroup:getRealTargets(data.tos)
   for _, p in ipairs(room.alive_players) do
     if not table.contains(current_targets, p.id) and not room:getPlayerById(data.from):isProhibited(p, data.card) then
-      if data.card.skill:modTargetFilter(p.id, {}, data.from, data.card, not bypass_distances) then
+      if data.card.skill:modTargetFilter(p.id, {}, room:getPlayerById(data.from), data.card, not bypass_distances) then
         table.insert(tos, p.id)
       end
     end
@@ -167,7 +152,7 @@ Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distance
   local tos = {}
   for _, p in ipairs(room.alive_players) do
     if not player:isProhibited(p, card) then
-      if card.skill:modTargetFilter(p.id, {}, player.id, card, not bypass_distances) then
+      if card.skill:modTargetFilter(p.id, {}, player, card, not bypass_distances) then
         table.insert(tos, p.id)
       end
     end
@@ -180,7 +165,7 @@ Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distance
     for _, first_id in ipairs(tos) do
       local seconds = {}
       for _, second in ipairs(room.alive_players) do
-        if second.id ~= first_id and card.skill:modTargetFilter(second.id, {first_id}, player.id, card, not bypass_distances) then
+        if second.id ~= first_id and card.skill:modTargetFilter(second.id, {first_id}, player, card, not bypass_distances) then
           table.insert(seconds, second.id)
         end
       end
@@ -1149,8 +1134,8 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
     card.skillName = skillName
     return card.skill:canUse(player, card, extra_data) and not player:prohibitUse(card)
     and table.find(room.alive_players, function (p)
-      return not player:isProhibited(p, card) and card.skill:modTargetFilter(p.id, {}, player.id, card, not bypass_distances)
-    end)
+      return not player:isProhibited(p, card) and card.skill:modTargetFilter(p.id, {}, player, card, not bypass_distances)
+    end) ~= nil
   end)
   extra_data.virtualuse_names = names
   local dat
