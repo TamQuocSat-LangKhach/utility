@@ -216,7 +216,7 @@ end
 -- 判断一名角色为一个使用事件的唯一目标
 --
 -- 规则集描述为目标角色数为1，是不包括死亡角色且不计算重复目标的
----@param player ServerPlayer @ 目标角色
+---@param player ServerPlayer|integer @ 目标角色
 ---@param data CardUseStruct @ 使用事件的data
 ---@param event Event @ 使用事件的时机（需判断使用TargetGroup还是AimGroup，by smart Ho-spair）
 ---@return boolean
@@ -228,9 +228,10 @@ Utility.isOnlyTarget = function(player, data, event)
   else
     tos = TargetGroup:getRealTargets(data.tos)
   end
-  if not table.contains(tos, player.id) then return false end
-  for _, p in ipairs(player.room.alive_players) do
-    if p ~= player and table.contains(tos, p.id) then
+  local pid = type(player) == "number" and player or player.id
+  if not table.contains(tos, pid) then return false end
+  for _, p in ipairs(Fk:currentRoom().alive_players) do
+    if p.id ~= pid and table.contains(tos, p.id) then
       return false
     end
   end
