@@ -91,6 +91,9 @@ Fk:addQmlMark{
 }
 
 -- 详细描述mark: @[:]xxxx
+-- 翻译储存值，值可以是字符串，或者字符串表
+-- 若储存字符串，标记显示该字符串的翻译，若储存字符串表，标记显示表元素个数
+-- 例：手杀曹嵩亿金
 Fk:addQmlMark{
   name = ":",
   how_to_show = function(name, value)
@@ -103,6 +106,23 @@ Fk:addQmlMark{
   end,
   qml_path = "packages/utility/qml/DetailBox"
 }
+
+-- 翻译标记名mark: @[desc]xxxx
+-- 标记qml显示 :xxxx 的翻译（xxxx为标记名，不含“@[desc]”）
+-- 标记外部显示此标记的个数，若为1个则仅显示标记名
+-- 可用于需要解释作用的标记，如延时效果，例：新服神张飞神裁
+Fk:addQmlMark{
+  name = "desc",
+  how_to_show = function(name, value)
+    local number = tonumber(value)
+    if number and number > 1 then
+      return value
+    end
+    return " "
+  end,
+  qml_path = "packages/utility/qml/DescMarkBox"
+}
+
 
 --先辅mark
 --作为table只有两个参数：
