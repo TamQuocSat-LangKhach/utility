@@ -2765,7 +2765,7 @@ end
 ---@param skillName? string @ 技能名
 ---@param cancelable? boolean @ 能否点取消
 ---@param prompt? string @ 提示信息
----@return integer[], boolean|nil @ 增加或删除的目标列表，第二个值表示是“增加(true/nil)”还是“移除(false)”
+---@return integer[] @ 增加或删除的目标列表，第二个值表示是“增加(true/nil)”还是“移除(false)”
 Utility.askForAddCancelTargets = function (chooser, players, targets, limitAdd, limitSub, skillName, cancelable, prompt)
   if #players == 0 then return {} end
   local others = table.filter(players, function(e) return not table.contains(targets, e) end)
@@ -2794,7 +2794,7 @@ Utility.askForAddCancelTargets = function (chooser, players, targets, limitAdd, 
       to = table.random(targets, limitSub[1] or 1)
     end
   end
-  return to, table.contains(targets, to[1])
+  return to
 end
 
 -- 用于增加/减少目标的选人函数的ActiveSkill
