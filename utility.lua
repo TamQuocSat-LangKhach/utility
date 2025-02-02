@@ -2756,6 +2756,90 @@ Utility.askForJointCard = function (players, minNum, maxNum, includeEquip, skill
   return ret
 end
 
+--- 增加或删减多个目标
+---@param chooser ServerPlayer @ 选择者
+---@param players integer[] @ 可增加或可删除的角色
+---@param targets integer[] @ 原目标
+---@param limitAdd? [integer, integer] @ 增加目标的数量限制[最小值, 最大值]
+---@param limitSub? [integer, integer] @ 减少目标的数量限制[最小值, 最大值]
+---@param skillName? string @ 技能名
+---@param cancelable? boolean @ 能否点取消
+---@param prompt? string @ 提示信息
+---@return integer[], boolean|nil @ 增加或删除的目标列表，第二个值表示是“增加(true/nil)”还是“移除(false)”
+Utility.askForAddCancelTargets = function (chooser, players, targets, limitAdd, limitSub, skillName, cancelable, prompt)
+  if #players == 0 then return {} end
+  local others = table.filter(players, function(e) return not table.contains(targets, e) end)
+  limitAdd = limitAdd or {0, #others}
+  limitSub = limitSub or {0, #targets}
+
+  local room = chooser.room
+  local ask_data = {
+    targets = players,
+    add_min_num = limitAdd[1],
+    add_max_num = limitAdd[2],
+    sub_min_num = limitSub[1],
+    sub_max_num = limitSub[2],
+    min_num = 1,
+    skillName = skillName,
+    extra_data = targets,
+  }
+  local _, ret = room:askForUseActiveSkill(chooser, "#util_addandcanceltarget", prompt, cancelable, ask_data)
+  local to = {}
+  if ret then
+    to = ret.targets
+  elseif not cancelable then
+    if not limitAdd[1] or (#others >= limitAdd[1]) then
+      to = table.random(others, limitAdd[1] or 1)
+    elseif not limitSub[1] or (#targets >= limitSub[1]) then
+      to = table.random(targets, limitSub[1] or 1)
+    end
+  end
+  return to, table.contains(targets, to[1])
+end
+
+-- 用于增加/减少目标的选人函数的ActiveSkill
+Fk:addSkill(fk.CreateActiveSkill{
+  name = "#util_addandcanceltarget",
+  card_num = 0,
+  card_filter = Util.FalseFunc,
+  target_filter = function(self, to_select, selected, _, _, extra_data)
+    if not table.contains(extra_data.targets, to_select) then return false end
+    if selected[1] then
+      if table.contains(extra_data.extra_data, selected[1]) then
+        return table.contains(extra_data.extra_data, to_select) and #selected < extra_data.sub_max_num
+      else
+        return (not table.contains(extra_data.extra_data, to_select)) and #selected < extra_data.add_max_num
+      end
+    else
+      if table.contains(extra_data.extra_data, to_select) then
+        return #selected < extra_data.sub_max_num
+      else
+        return #selected < extra_data.add_max_num
+      end
+    end
+  end,
+  target_tip = function(_, to_select, selected, _, _, selectable, extra_data)
+    if not selectable or table.contains(selected, to_select) then return end
+    if type(extra_data.extra_data) == "table" then
+      if table.contains(extra_data.extra_data, to_select) then
+        return { {content = "@@CancelTarget", type = "warning"} }
+      else
+        return { {content = "@@AddTarget", type = "normal"} }
+      end
+    end
+  end,
+  feasible = function(self, selected)
+    if not selected[1] then return false end
+    if table.contains(self.extra_data, selected[1]) then
+      return #selected >= self.sub_min_num
+    else
+      return #selected >= self.add_min_num
+    end
+  end
+})
+Fk:loadTranslationTable{
+  ["#util_addandcanceltarget"] = "增减目标",
+}
 
 --注册一些通用的TargetTip
 
