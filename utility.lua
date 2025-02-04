@@ -685,15 +685,14 @@ Fk:loadTranslationTable{
 ---@param cards1 integer[] @ 第一行的卡牌
 ---@param cards2 integer[] @ 第二行的卡牌
 ---@param prompt string @ 操作提示
----@param n? integer @ 至多可交换的卡牌数量（不填或负数则无限制）
+---@param n? integer @ 至多可交换的卡牌数量（不填则无限制）
 ---@param cancelable? boolean @ 是否可取消，默认可以
 ---@return integer[]
 Utility.askForExchange = function(player, name1, name2, cards1, cards2, prompt, n, cancelable)
-  n = n or -1
   return player.room:askForPoxi(player, "qml_exchange", {
     { name1, cards1 },
     { name2, cards2 },
-  }, {prompt, n}, (cancelable == nil) and true or cancelable)
+  }, {prompt, n or 9999, cancelable == false}, (cancelable == nil) and true or cancelable)
 end
 
 Fk:addPoxiMethod{
@@ -719,7 +718,16 @@ Fk:addPoxiMethod{
   end,
   prompt = function (data, extra_data)
     return extra_data and extra_data[1] or "#AskForQMLExchange"
-  end
+  end,
+  default_choice = function (data, extra_data)
+    if data == nil or extra_data == nil or not extra_data[3] then return {} end
+    local ret = {}
+    local max = extra_data[2]
+    for _, dat in ipairs(data) do
+      table.insertTable(ret, table.slice(dat[2], 1, max + 1))
+    end
+    return ret
+  end,
 }
 
 Fk:loadTranslationTable{
