@@ -13,6 +13,7 @@ GraphicsBox {
   property var selectedItem: []
   property var ok_options: []
   property var cards: []
+  property var all_cards: []
   property var disable_cards: []
   property string prompt
   property int min
@@ -60,7 +61,7 @@ GraphicsBox {
     color: "#88EEEEEE"
     radius: 10
 
-    Flickable {
+    GridView {
       id: generalContainer
 
       anchors.fill: parent
@@ -71,19 +72,11 @@ GraphicsBox {
 
       contentHeight: gridLayout.implicitHeight
       clip: true
+      cellWidth: 93 + 5
+      cellHeight: 130 + 5
 
-      GridLayout {
-        id: gridLayout
-        columns: 7
-        width: parent.width
-        clip: true
-
-        Repeater {
-          id: to_select
-          model: cards
-          delegate: cardDelegate
-        }
-      }
+      model: cards
+      delegate: cardDelegate
     }
   }
 
@@ -184,29 +177,34 @@ GraphicsBox {
       }
 
       ToolButton {
-        visible: cards.length > 21
+        visible: true //cards.length > 21
         text: isSearching ? luatr("Back") : luatr("Search")
         enabled: (word.text !== "" || isSearching)
         onClicked: {
-          if (isSearching) {
-            for (var i = 0; i < to_select.count; i++) {
-              to_select.itemAt(i).visible = true;
-            }
-            isSearching = false;
-            generalContainer.contentWidth = Math.min(7, cards.length) * 100;
+          root.selectedItem = [];
+          if (root.isSearching) {
+            // for (var i = 0; i < generalContainer.count; i++) {
+            //   generalContainer.itemAtIndex(i).visible = true;
+            // }
+            root.cards = root.all_cards;
+            root.isSearching = false;
+            // generalContainer.contentWidth = Math.min(7, cards.length) * 100;
           } else {
-            var findNum = 0;
-            for (var i = 0; i < to_select.count; i++) {
-              const item = to_select.itemAt(i);
-              if (luatr(item.name).indexOf(word.text) === -1) {
-                item.visible = false;
-              } else {
-                findNum++;
-              }
-              generalContainer.contentWidth = Math.min(7, findNum) * 100;
-            }
-            word.text = "";
-            isSearching = true;
+            // var findNum = 0;
+            // for (var i = 0; i < generalContainer.count; i++) {
+            //   const item = generalContainer.itemAtIndex(i);
+            //   if (luatr(item.name).indexOf(word.text) === -1) {
+            //     item.visible = false;
+            //   } else {
+            //     findNum++;
+            //   }
+            //   generalContainer.contentWidth = Math.min(7, findNum) * 100;
+            // }
+            // word.text = "";
+            root.cards = root.all_cards.filter(name => {
+              return luatr(name).indexOf(word.text) !== -1;
+            });
+            root.isSearching = true;
           }
         }
         background: Rectangle {
@@ -222,7 +220,7 @@ GraphicsBox {
 
   function updateCardSelectable() {
     if (selectedItem.length > max) {
-      const item = to_select.itemAt(cards.indexOf(selectedItem[0]));
+      const item = generalContainer.itemAtIndex(cards.indexOf(selectedItem[0]));
       item.selected = false;
     } else {
       let item;
@@ -236,6 +234,7 @@ GraphicsBox {
   function loadData(data) {
     const d = data;
     cards = d[0];
+    all_cards = d[0];
     ok_options = d[1];
     prompt = d[2] ?? "";
     cancel_options = d[3] ?? []
