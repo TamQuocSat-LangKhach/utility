@@ -941,31 +941,6 @@ Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName,
   return use
 end
 
-local virtual_viewas = fk.CreateViewAsSkill{
-  name = "virtual_viewas",
-  card_filter = Util.FalseFunc,
-  interaction = function(self)
-    if #self.virtualuse_allnames == 1 then return end
-    return UI.ComboBox {choices = self.virtualuse_names, all_choices = self.virtualuse_allnames }
-  end,
-  view_as = function(self)
-    local name = (#self.virtualuse_allnames == 1) and self.virtualuse_allnames[1] or self.interaction.data
-    if not name then return nil end
-    local card = Fk:cloneCard(name)
-    if self.skillName then card.skillName = self.skillName end
-    card:addSubcards(self.selected_subcards)
-    if Self:prohibitUse(card) then return nil end -- FIXME: 修复合法性判断后删除此段
-    return card
-  end,
-}
-Fk:addSkill(virtual_viewas)
-Fk:loadTranslationTable{
-  ["virtual_viewas"] = "视为使用",
-  ["#askForUseVirtualCard"] = "%arg：请视为使用 %arg2",
-  ["#askForUseVirtualCards"] = "%arg：请视为使用一张牌（可选 %arg2 种）",
-}
-
-
 
 --- 判断使用/打出事件是否是在使用手牌
 ---@param player ServerPlayer @ 要判断的使用者
