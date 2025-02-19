@@ -7,29 +7,6 @@
 ---@class Utility
 local Utility = require 'packages/utility/_base'
 
--- 在指定历史范围中找符合条件的事件（逆序）
----@param room Room
----@param eventType GameEvent @ 要查找的事件类型
----@param func fun(e: GameEvent): boolean? @ 过滤用的函数
----@param n integer @ 最多找多少个
----@param end_id integer @ 查询历史范围：从最后的事件开始逆序查找直到id为end_id的事件（不含）
----@return GameEvent[] @ 找到的符合条件的所有事件，最多n个但不保证有n个
----@deprecated
-Utility.getEventsByRule = function(room, eventType, n, func, end_id)
-  fk.qWarning("Utility.getEventsByRule is deprecated! Use GameLogic:getEventsByRule instead")
-  local ret = {}
-	local events = room.logic.event_recorder[eventType] or Util.DummyTable
-  for i = #events, 1, -1 do
-    local e = events[i]
-    if e.id <= end_id then break end
-    if func(e) then
-      table.insert(ret, e)
-      if #ret >= n then break end
-    end
-  end
-  return ret
-end
-
 -- 用来判定一些卡牌在此次移动事件发生之后没有再被移动过（注意：由于洗牌的存在，若判定处在弃牌堆的卡牌需要手动判区域）
 --
 -- 根据规则集，如果需要在卡牌移动后对参与此事件的卡牌进行操作，是需要过一遍这个检测的(=ﾟωﾟ)ﾉ
@@ -56,26 +33,6 @@ Utility.moveCardsHoldingAreaCheck = function(room, cards, end_id)
   return ret
 end
 
---因执行牌的效果而对一名角色造成伤害，即通常描述的使用牌对目标角色造成伤害
----@param room Room
----@param by_user boolean? @ 进一步判定使用者和来源是否一致（默认为true）
----@return boolean?
----@deprecated
-Utility.damageByCardEffect = function(room, by_user)
-  fk.qWarning("Utility.damageByCardEffect is deprecated! Use GameLogic:damageByCardEffect instead")
-  by_user = (by_user == nil) and true or by_user
-  local d_event = room.logic:getCurrentEvent():findParent(GameEvent.Damage, true)
-  if d_event == nil then return false end
-  local damage = d_event.data[1]
-  if damage.from == nil or damage.chain or damage.card == nil then return false end
-  local c_event = d_event:findParent(GameEvent.CardEffect, false)
-  if c_event == nil then return false end
-  return damage.card == c_event.data[1].card and
-  (not by_user or damage.from.id == c_event.data[1].from)
-end
-
-
-
 -- 使用牌的合法性检测
 ---@param room Room @ 房间
 ---@param player ServerPlayer @ 使用来源
@@ -88,29 +45,6 @@ Utility.canUseCard = function(room, player, card, times_limited)
   return can_use
 end
 
-
--- 获取使用牌的合法额外目标（【借刀杀人】等带副目标的卡牌除外）
----@param room Room
----@param data CardUseStruct @ 使用事件的data
----@param bypass_distances boolean? @ 是否无距离关系的限制
----@param use_AimGroup boolean? @ 某些场合需要使用AimGroup，by smart Ho-spair
----@return integer[] @ 返回满足条件的player的id列表
----@deprecated
-Utility.getUseExtraTargets = function(room, data, bypass_distances, use_AimGroup)
-  fk.qWarning("Utility.getUseExtraTargets is deprecated! Use Room:getUseExtraTargets instead")
-  if not (data.card.type == Card.TypeBasic or data.card:isCommonTrick()) then return {} end
-  if data.card.skill:getMinTargetNum() > 1 then return {} end --stupid collateral
-  local tos = {}
-  local current_targets = use_AimGroup and AimGroup:getAllTargets(data.tos) or TargetGroup:getRealTargets(data.tos)
-  for _, p in ipairs(room.alive_players) do
-    if not table.contains(current_targets, p.id) and not room:getPlayerById(data.from):isProhibited(p, data.card) then
-      if data.card.skill:modTargetFilter(p.id, {}, room:getPlayerById(data.from), data.card, not bypass_distances) then
-        table.insert(tos, p.id)
-      end
-    end
-  end
-  return tos
-end
 
 -- 判断是否能将当前结算的目标转移给一名角色（其实也有一些扩展用途，但必须在指定/成为目标时才能使用）
 -- 
@@ -541,17 +475,6 @@ Utility.changeHero = function(player, new_general, maxHpChange)
   end
 end
 
-
--- 获取角色对应Mark并初始化为table
----@param player Player @ 要被获取标记的那个玩家
----@param mark string @ 标记
----@return table
----@deprecated
-Utility.getMark = function(player, mark)
-  fk.qWarning("Utility.getMark is deprecated! Use Player:getTableMark instead")
-  return type(player:getMark(mark)) == "table" and player:getMark(mark) or {}
-end
-
 -- 获取角色对应私人Mark的实际值并初始化为table
 ---@param player Player @ 要被获取标记的那个玩家
 ---@param name string @ 标记名称（不带前缀）
@@ -934,181 +857,6 @@ Fk:loadTranslationTable{
 }
 
 
---- 将一些卡牌同时分配给一些角色。
----@param room Room @ 房间
----@param list table<string, integer[]> @ 分配牌和角色的数据表，键为取整后字符串化的角色id，值为分配给其的牌
----@param proposer? integer @ 操作者的id。默认为空
----@param skillName? string @ 技能名。默认为“分配”
----@return integer[][] @ 返回成功分配的卡牌
----@deprecated
-Utility.doDistribution = function (room, list, proposer, skillName)
-  fk.qWarning("Utility.doDistribution is deprecated! Use Room:doYiji instead")
-  skillName = skillName or "distribution_skill"
-  local moveInfos = {}
-  local move_ids = {}
-  for str, cards in pairs(list) do
-    local to = tonumber(str)
-    local toP = room:getPlayerById(to)
-    local handcards = toP:getCardIds("h")
-    cards = table.filter(cards, function (id) return not table.contains(handcards, id) end)
-    if #cards > 0 then
-      table.insertTable(move_ids, cards)
-      local moveMap = {}
-      local noFrom = {}
-      for _, id in ipairs(cards) do
-        local from = room.owner_map[id]
-        if from then
-          moveMap[from] = moveMap[from] or {}
-          table.insert(moveMap[from], id)
-        else
-          table.insert(noFrom, id)
-        end
-      end
-      for from, _cards in pairs(moveMap) do
-        table.insert(moveInfos, {
-          ids = _cards,
-          moveInfo = table.map(_cards, function(id)
-            return {cardId = id, fromArea = room:getCardArea(id), fromSpecialName = room:getPlayerById(from):getPileNameOfId(id)}
-          end),
-          from = from,
-          to = to,
-          toArea = Card.PlayerHand,
-          moveReason = fk.ReasonGive,
-          proposer = proposer,
-          skillName = skillName,
-          visiblePlayers = proposer,
-        })
-      end
-      if #noFrom > 0 then
-        table.insert(moveInfos, {
-          ids = noFrom,
-          to = to,
-          toArea = Card.PlayerHand,
-          moveReason = fk.ReasonGive,
-          proposer = proposer,
-          skillName = skillName,
-          visiblePlayers = proposer,
-        })
-      end
-    end
-  end
-  if #moveInfos > 0 then
-    room:moveCards(table.unpack(moveInfos))
-  end
-  return move_ids
-end
-
-
---- 询问将卡牌分配给任意角色。
----@param player ServerPlayer @ 要询问的玩家
----@param cards? integer[] @ 要分配的卡牌。默认拥有的所有牌
----@param targets? ServerPlayer[] @ 可以获得卡牌的角色。默认所有存活角色
----@param skillName? string @ 技能名，影响焦点信息。默认为“分配”
----@param minNum? integer @ 最少交出的卡牌数，默认0
----@param maxNum? integer @ 最多交出的卡牌数，默认所有牌
----@param prompt? string @ 询问提示信息
----@param expand_pile? string|integer[] @ 可选私人牌堆名称，如要分配你武将牌上的牌请填写
----@param skipMove? boolean @ 是否跳过移动。默认不跳过
----@param single_max? integer|table @ 限制每人能获得的最大牌数。输入整数或(以角色id为键以整数为值)的表
----@return table<string, integer[]> @ 返回一个表，键为取整后字符串化的角色id，值为分配给其的牌
----@deprecated
-Utility.askForDistribution = function(player, cards, targets, skillName, minNum, maxNum, prompt, expand_pile, skipMove, single_max)
-  fk.qWarning("Utility.askForDistribution is deprecated! Use Room:askForYiji instead")
-  local room = player.room
-  targets = targets or room.alive_players
-  cards = cards or player:getCardIds("he")
-  local _cards = table.simpleClone(cards)
-  targets = table.map(targets, Util.IdMapper)
-  room:sortPlayersByAction(targets)
-  skillName = skillName or "distribution_skill"
-  minNum = minNum or 0
-  maxNum = maxNum or #cards
-  local getString = function(n) return string.format("%.0f", n) end
-  local list = {}
-  for _, pid in ipairs(targets) do
-    list[getString(pid)] = {}
-  end
-  local data = { expand_pile = expand_pile , skillName = skillName }
-  room:setPlayerMark(player, "distribution_targets", targets)
-  local residueMap = {}
-  if type(single_max) == "table" then
-    for pid, v in pairs(single_max) do
-      residueMap[getString(pid)] = v
-    end
-  end
-  local residue_sum = 0
-  local residue_num = type(single_max) == "number" and single_max or 9999
-  for _, pid in ipairs(targets) do
-    local num = residueMap[getString(pid)] or residue_num
-    room:setPlayerMark(room:getPlayerById(pid), "distribution_residue", num)
-    residue_sum = residue_sum + num
-  end
-  minNum = math.min(minNum, #_cards, residue_sum)
-
-  while maxNum > 0 and #_cards > 0 do
-    room:setPlayerMark(player, "distribution_cards", _cards)
-    room:setPlayerMark(player, "distribution_maxnum", maxNum)
-    local _prompt = prompt or ("#distribution_skill:::"..minNum..":"..maxNum)
-    local success, dat = room:askForUseActiveSkill(player, "distribution_skill", _prompt, minNum == 0, data, true)
-    if success and dat then
-      local to = dat.targets[1]
-      local give_cards = dat.cards
-      for _, id in ipairs(give_cards) do
-        table.insert(list[getString(to)], id)
-        table.removeOne(_cards, id)
-        room:setCardMark(Fk:getCardById(id), "@distribution_to", Fk:translate(room:getPlayerById(to).general))
-      end
-      minNum = math.max(0, minNum - #give_cards)
-      maxNum = maxNum - #give_cards
-      room:removePlayerMark(room:getPlayerById(to), "distribution_residue", #give_cards)
-    else
-      break
-    end
-  end
-
-  for _, id in ipairs(cards) do
-    room:setCardMark(Fk:getCardById(id), "@distribution_to", 0)
-  end
-  for _, pid in ipairs(targets) do
-    if minNum == 0 or #_cards == 0 then break end
-    local p = room:getPlayerById(pid)
-    local num = math.min(p:getMark("distribution_residue"), minNum, #_cards)
-    if num > 0 then
-      for i = num, 1, -1 do
-        local c = table.remove(_cards, i)
-        table.insert(list[getString(pid)], c)
-        minNum = minNum - 1
-      end
-    end
-  end
-  if not skipMove then
-    room:doYiji(list, player.id, skillName)
-  end
-
-  return list
-end
-local distribution_skill = fk.CreateActiveSkill{
-  name = "distribution_skill",
-  mute = true,
-  min_card_num = 1,
-  card_filter = function(self, to_select, selected)
-    return #selected < Self:getMark("distribution_maxnum") and table.contains(Self:getMark("distribution_cards"), to_select)
-  end,
-  target_num = 1,
-  target_filter = function(self, to_select, selected, selected_cards)
-    return #selected == 0 and #selected_cards > 0 and table.contains(Self:getMark("distribution_targets"), to_select)
-    and #selected_cards <= (Fk:currentRoom():getPlayerById(to_select):getMark("distribution_residue"))
-  end,
-}
-Fk:addSkill(distribution_skill)
-Fk:loadTranslationTable{
-  ["#distribution_skill"] = "请分配这些牌，至少%arg张，剩余%arg2张",
-  ["distribution_skill"] = "分配",
-  ["@distribution_to"] = "",
-}
-
-
-
 --- 询问玩家使用一张虚拟卡，或从几种牌名中选择一种视为使用
 ---@param room Room @ 房间
 ---@param player ServerPlayer @ 要询问的玩家
@@ -1123,7 +871,9 @@ Fk:loadTranslationTable{
 ---@param extra_data? UseExtraData|table @ 额外信息，因技能而异了
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
 ---@return CardUseStruct? @ 返回卡牌使用框架。若取消使用则返回空
+---@deprecated
 Utility.askForUseVirtualCard = function(room, player, name, subcards, skillName, prompt, cancelable, bypass_times, bypass_distances, extraUse, extra_data, skipUse)
+  fk.qWarning("Utility.askForUseVirtualCard is deprecated! Use Room:askToUseVirtualCard instead")
   if player.dead then return end
   subcards = subcards or {}
   extraUse = (extraUse == nil) and true or extraUse
@@ -1260,7 +1010,9 @@ end
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
 ---@param cancelable? boolean @ 是否可以取消。默认可以取消
 ---@return CardUseStruct? @ 返回卡牌使用框架。取消使用则返回空
+---@deprecated
 Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, prompt, extra_data, skipUse, cancelable)
+  fk.qWarning("Utility.askForUseRealCard is deprecated! Use Room:askToUseRealCard instead")
   cards = cards or player:getCardIds("h")
   pattern = pattern or "."
   skillName = skillName or "realcard_viewas"
@@ -1389,27 +1141,6 @@ Fk:loadTranslationTable{
   ["##askForPlayCard"] = "%arg：请使用一张牌",
 }
 
---- 判断一名角色是否为男性
----@param player Player @ 玩家
----@param realGender? boolean @ 是否获取真实性别，无视双性人。默认否
----@return boolean
----@deprecated
-Utility.isMale = function(player, realGender)
-  fk.qWarning("Utility.isMale is deprecated! Use Player.isMale instead")
-  return player.gender == General.Male or (not realGender and player.gender == General.Bigender)
-end
-
-
---- 判断一名角色是否为女性
----@param player Player @ 玩家
----@param realGender? boolean @ 是否获取真实性别，无视双性人。默认否
----@return boolean
----@deprecated
-Utility.isFemale = function(player, realGender)
-  fk.qWarning("Utility.isFemale is deprecated! Use Player.isFemale instead")
-  return player.gender == General.Female or (not realGender and player.gender == General.Bigender)
-end
-
 
 --- 获得队友（注意：在客户端不能对暗身份角色生效）（或许对ai有用？）
 ---@param room Room|AbstractRoom @ 房间
@@ -1446,8 +1177,6 @@ Utility.GetEnemies = function(room, player, include_dead)
       (p.role:startsWith("cool_") and player.role:startsWith("warm_")))
   end)
 end
-
-
 
 
 -- 卡牌标记 进入弃牌堆销毁 例OL蒲元
@@ -1664,128 +1393,6 @@ local global_slash_targetmod = fk.CreateTargetModSkill{
 }
 Fk:addSkill(global_slash_targetmod)
 
---- 获取实际的伤害事件
----@deprecated
-Utility.getActualDamageEvents = function(room, n, func, scope, end_id)
-  fk.qWarning("Utility.getActualDamageEvents is deprecated! Use GameLogic.getActualDamageEvents instead")
-  if not end_id then
-    scope = scope or Player.HistoryTurn
-  end
-
-  n = n or 1
-  func = func or Util.TrueFunc
-
-  local logic = room.logic
-  local eventType = GameEvent.Damage
-  local ret = {}
-  local endIdRecorded
-  local tempEvents = {}
-
-  local addTempEvents = function(reverse)
-    if #tempEvents > 0 and #ret < n then
-      table.sort(tempEvents, function(a, b)
-        if reverse then
-          return a.data[1].dealtRecorderId > b.data[1].dealtRecorderId
-        else
-          return a.data[1].dealtRecorderId < b.data[1].dealtRecorderId
-        end
-      end)
-
-      for _, e in ipairs(tempEvents) do
-        table.insert(ret, e)
-        if #ret >= n then return true end
-      end
-    end
-
-    endIdRecorded = nil
-    tempEvents = {}
-
-    return false
-  end
-
-  if scope then
-    local event = logic:getCurrentEvent()
-    local start_event ---@type GameEvent
-    if scope == Player.HistoryGame then
-      start_event = logic.all_game_events[1]
-    elseif scope == Player.HistoryRound then
-      start_event = event:findParent(GameEvent.Round, true)
-    elseif scope == Player.HistoryTurn then
-      start_event = event:findParent(GameEvent.Turn, true)
-    elseif scope == Player.HistoryPhase then
-      start_event = event:findParent(GameEvent.Phase, true)
-    end
-
-    if not start_event then return {} end
-
-    local events = logic.event_recorder[eventType] or Util.DummyTable
-    local from = start_event.id
-    local to = start_event.end_id
-    if math.abs(to) == 1 then to = #logic.all_game_events end
-
-    for _, v in ipairs(events) do
-      local damageStruct = v.data[1]
-      if damageStruct.dealtRecorderId then
-        if endIdRecorded and v.id > endIdRecorded then
-          local result = addTempEvents()
-          if result then
-            return ret
-          end
-        end
-
-        if v.id >= from and v.id <= to then
-          if not endIdRecorded and v.end_id > -1 and v.end_id > v.id then
-            endIdRecorded = v.end_id
-          end
-
-          if func(v) then
-            if endIdRecorded then
-              table.insert(tempEvents, v)
-            else
-              table.insert(ret, v)
-            end
-          end
-        end
-        if #ret >= n then break end
-      end
-    end
-
-    addTempEvents()
-  else
-    local events = logic.event_recorder[eventType] or Util.DummyTable
-
-    for i = #events, 1, -1 do
-      local e = events[i]
-      if e.id <= end_id then break end
-
-      local damageStruct = e.data[1]
-      if damageStruct.dealtRecorderId then
-        if e.end_id == -1 or (endIdRecorded and endIdRecorded > e.end_id) then
-          local result = addTempEvents(true)
-          if result then
-            return ret
-          end
-
-          if func(e) then
-            table.insert(ret, e)
-          end    
-        else
-          endIdRecorded = e.end_id
-          if func(e) then
-            table.insert(tempEvents, e)
-          end
-        end
-
-        if #ret >= n then break end
-      end
-    end
-
-    addTempEvents(true)
-  end
-
-  return ret
-end
-
 --- 赠予
 ---@param player ServerPlayer @ 交出牌的玩家
 ---@param target ServerPlayer @ 获得牌的玩家
@@ -1833,26 +1440,6 @@ Utility.presentCard = function(player, target, card)
   return true
 end
 
---- 询问玩家选择X张牌和Y名角色。
----
---- 返回两个值，第一个是选择目标的id列表，第二个是选择牌的id列表
----@param self Room
----@param player ServerPlayer @ 要询问的玩家
----@param minCardNum integer @ 选卡牌最小值
----@param maxCardNum integer @ 选卡牌最大值
----@param targets integer[] @ 选择目标的id范围
----@param minTargetNum integer @ 选目标最小值
----@param maxTargetNum integer @ 选目标最大值
----@param pattern? string @ 选牌规则
----@param prompt? string @ 提示信息
----@param cancelable? boolean @ 能否点取消
----@param no_indicate? boolean @ 是否不显示指示线
----@return integer[], integer[]
----@deprecated
-function Utility.askForChooseCardsAndPlayers(self, player, minCardNum, maxCardNum, targets, minTargetNum, maxTargetNum, pattern, prompt, skillName, cancelable, no_indicate)
-  fk.qWarning("Utility.askForChooseCardsAndPlayers is deprecated. Use Room:askForChooseCardsAndPlayers instead.")
-  return self:askForChooseCardsAndPlayers(player, minCardNum, maxCardNum, targets, minTargetNum, maxTargetNum, pattern, prompt, skillName, cancelable, no_indicate)
-end
 --从键值对表中随机取N个值（每种最多取一个）
 ---@param cardDic table @ 卡表
 ---@param num number @ 要取出的数量
@@ -2018,18 +1605,6 @@ Utility.clearHandMark = function(player, name)
   end
 end
 
---清理遗留在处理区的卡牌
----@param room Room @ 房间
----@param cards integer[] @ 待清理的卡牌
----@param skillName? string @ 技能名
----@deprecated
-Utility.clearRemainCards = function(room, cards, skillName)
-  fk.qWarning("Utility.clearRemainCards is deprecated! Use Room:cleanProcessingArea instead")
-  cards = table.filter(cards, function(id) return room:getCardArea(id) == Card.Processing end)
-  if #cards > 0 then
-    room:moveCardTo(cards, Card.DiscardPile, nil, fk.ReasonJustMove, skillName)
-  end
-end
 
 --从牌堆翻开一定数量的卡牌（移动到处理区）
 ---@param player ServerPlayer @ 进行操作的角色
