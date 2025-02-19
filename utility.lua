@@ -39,12 +39,13 @@ end
 ---@param card Card @ 被使用的卡牌
 ---@param times_limited? boolean @ 是否有次数限制
 ---@return boolean?
+---@deprecated
 Utility.canUseCard = function(room, player, card, times_limited)
+  fk.qWarning("Utility.canUseCard is deprecated! Use Player:canUse instead")
   if player:prohibitUse(card) then return false end
   local can_use = card.skill:canUse(player, card, { bypass_times = not times_limited })
   return can_use
 end
-
 
 -- 判断是否能将当前结算的目标转移给一名角色（其实也有一些扩展用途，但必须在指定/成为目标时才能使用）
 -- 
@@ -113,17 +114,6 @@ Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distance
   end
   return real_tos
 end
-
-
-
-
-
-
-
-
-
-
-
 
 -- 获取目标对应的角色（不包括死亡角色且不计算重复目标）
 ---@param room Room
