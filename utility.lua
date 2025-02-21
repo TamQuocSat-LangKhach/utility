@@ -1032,28 +1032,6 @@ Utility.askForUseRealCard = function(room, player, cards, pattern, skillName, pr
   end
   return use
 end
-local realcard_viewas = fk.CreateViewAsSkill{
-  name = "realcard_viewas",
-  card_filter = function (self, to_select, selected)
-    return #selected == 0 and table.contains(self.optional_cards, to_select)
-  end,
-  view_as = function(self, cards)
-    if #cards == 1 then
-      local cid = cards[1]
-      local mark = Self:getTableMark("realcard_vs_owners")
-      if mark[tostring(cid)] then
-        local owner = Fk:currentRoom():getPlayerById(mark[tostring(cid)])
-        Fk:filterCard(cid, owner)
-      end
-      return Fk:getCardById(cid)
-    end
-  end,
-}
-Fk:addSkill(realcard_viewas)
-Fk:loadTranslationTable{
-  ["realcard_viewas"] = "使用",
-  ["#askForUseRealCard"] = "%arg：请使用一张牌",
-}
 
 --- 询问玩家使用一张牌（支持使用视为技）
 ---
@@ -1152,66 +1130,6 @@ MarkEnum.DestructOutMyEquip = "__destr_my_equip"
 
 -- 卡牌标记 进入非装备区销毁(可在装备区/处理区移动) 例OL冯方女
 MarkEnum.DestructOutEquip = "__destr_equip"
-
-local CardDestructSkill = fk.CreateTriggerSkill{
-  name = "#card_destruct_skill",
-  global = true,
-  mute = true,
-  refresh_events = {fk.BeforeCardsMove},
-  can_refresh = function (self, event, target, player, data)
-    return player == player.room.players[1]
-  end,
-  on_refresh = function(self, event, target, player, data)
-    local room = player.room
-    local mirror_moves = {}
-    local ids = {}
-    for _, move in ipairs(data) do
-      if move.toArea ~= Card.Void then
-        local move_info = {}
-        local mirror_info = {}
-        for _, info in ipairs(move.moveInfo) do
-          local id = info.cardId
-          local card = Fk:getCardById(id)
-          local yes
-          if card:getMark(MarkEnum.DestructIntoDiscard) > 0 and move.toArea == Card.DiscardPile then
-            yes = true
-          end
-          if card:getMark(MarkEnum.DestructOutMyEquip) > 0 and info.fromArea == Card.PlayerEquip then
-            yes = info.fromArea == Card.PlayerEquip
-          end
-          if card:getMark(MarkEnum.DestructOutEquip) > 0 and (info.fromArea == Card.PlayerEquip and move.toArea ~= Card.PlayerEquip and move.toArea ~= Card.Processing) then
-            yes = true
-          end
-          if yes then
-            table.insert(mirror_info, info)
-            table.insert(ids, id)
-          else
-            table.insert(move_info, info)
-          end
-        end
-        if #mirror_info > 0 then
-          move.moveInfo = move_info
-          local mirror_move = table.clone(move)
-          mirror_move.to = nil
-          mirror_move.toArea = Card.Void
-          mirror_move.moveInfo = mirror_info
-          mirror_move.moveMark = nil
-          mirror_move.moveVisible = true
-          table.insert(mirror_moves, mirror_move)
-        end
-      end
-    end
-    if #ids > 0 then
-      room:sendLog{ type = "#destructDerivedCards", card = ids, }
-      table.insertTable(data, mirror_moves)
-    end
-  end,
-}
-Fk:addSkill(CardDestructSkill)
-Fk:loadTranslationTable{
-  ["#card_destruct_skill"] = "卡牌销毁",
-  ["#destructDerivedCards"] = "%card 被销毁了",
-}
 
 --花色互转（支持int(Card.Heart)，string("heart")，icon("♥")，symbol(translate后的红色"♥")）
 ---@param value any @ 花色
@@ -1326,37 +1244,6 @@ MarkEnum.SlashResidue = "__slash_residue"
 MarkEnum.SlashBypassTimes = "__slash_by_times"
 ---使用杀无距离限制，可带后缀
 MarkEnum.SlashBypassDistances = "__slash_by_dist"
-
-local global_slash_targetmod = fk.CreateTargetModSkill{
-  name = "global_slash_targetmod",
-  global = true,
-  residue_func = function(self, player, skill, scope)
-    if skill.trueName == "slash_skill" and scope == Player.HistoryPhase then
-      local num = player:getMark(MarkEnum.SlashResidue)
-      for _, s in ipairs(MarkEnum.TempMarkSuffix) do
-        num = num + player:getMark(MarkEnum.SlashResidue..s)
-      end
-      return num
-    end
-  end,
-  bypass_times = function(self, player, skill, scope)
-    if skill.trueName == "slash_skill" and scope == Player.HistoryPhase then
-      return player:getMark(MarkEnum.SlashBypassTimes) ~= 0 or
-      table.find(MarkEnum.TempMarkSuffix, function(s)
-        return player:getMark(MarkEnum.SlashBypassTimes .. s) ~= 0
-      end)
-    end
-  end,
-  bypass_distances = function (self, player, skill)
-    if skill.trueName == "slash_skill" then
-      return player:getMark(MarkEnum.SlashBypassDistances) ~= 0 or
-      table.find(MarkEnum.TempMarkSuffix, function(s)
-        return player:getMark(MarkEnum.SlashBypassDistances .. s) ~= 0
-      end)
-    end
-  end
-}
-Fk:addSkill(global_slash_targetmod)
 
 --- 赠予
 ---@param player ServerPlayer @ 交出牌的玩家
@@ -2345,50 +2232,6 @@ Utility.askForAddCancelTargets = function (chooser, players, targets, limitAdd, 
   return to
 end
 
--- 用于增加/减少目标的选人函数的ActiveSkill
-Fk:addSkill(fk.CreateActiveSkill{
-  name = "#util_addandcanceltarget",
-  card_num = 0,
-  card_filter = Util.FalseFunc,
-  target_filter = function(self, to_select, selected, _, _, extra_data)
-    if not table.contains(extra_data.targets, to_select) then return false end
-    if selected[1] then
-      if table.contains(extra_data.extra_data, selected[1]) then
-        return table.contains(extra_data.extra_data, to_select) and #selected < extra_data.sub_max_num
-      else
-        return (not table.contains(extra_data.extra_data, to_select)) and #selected < extra_data.add_max_num
-      end
-    else
-      if table.contains(extra_data.extra_data, to_select) then
-        return #selected < extra_data.sub_max_num
-      else
-        return #selected < extra_data.add_max_num
-      end
-    end
-  end,
-  target_tip = function(_, to_select, selected, _, _, selectable, extra_data)
-    if not selectable or table.contains(selected, to_select) then return end
-    if type(extra_data.extra_data) == "table" then
-      if table.contains(extra_data.extra_data, to_select) then
-        return { {content = "@@CancelTarget", type = "warning"} }
-      else
-        return { {content = "@@AddTarget", type = "normal"} }
-      end
-    end
-  end,
-  feasible = function(self, selected)
-    if not selected[1] then return false end
-    if table.contains(self.extra_data, selected[1]) then
-      return #selected >= self.sub_min_num
-    else
-      return #selected >= self.add_min_num
-    end
-  end
-})
-Fk:loadTranslationTable{
-  ["#util_addandcanceltarget"] = "增减目标",
-}
-
 --注册一些通用的TargetTip
 
 -- 用于增加/减少目标的选人函数的TargetTip
@@ -2466,46 +2309,11 @@ Utility.askForCardByMultiPatterns = function (player, patterns, skillName, cance
   return {}, ""
 end
 
-local choose_cards_mutlipat_skill = fk.CreateActiveSkill{
-  name = "choose_cards_mutlipat_skill",
-  interaction = function(self)
-    local patterns = self.patterns
-    if not patterns then return end
-    return UI.ComboBox {choices = table.map(patterns, function(v, i) return v[4] end) }
-  end,
-  card_filter = function(self, to_select, selected, player)
-    local patterns, choice = self.patterns, self.interaction.data
-    if not patterns or not choice then return end
-    if self.discard_skill and player:prohibitDiscard(to_select) then return end
-    for _, v in ipairs(patterns) do
-      if v[4] == choice then
-        return #selected < v[3] and Exppattern:Parse(v[1]):match(Fk:getCardById(to_select))
-      end
-    end
-  end,
-  target_filter = Util.FalseFunc,
-  feasible = function(self, _, cards)
-    local patterns, choice = self.patterns, self.interaction.data
-    if not patterns or not choice then return end
-    for _, v in ipairs(patterns) do
-      if v[4] == choice then
-        return #cards <= v[3] and #cards >= v[2]
-      end
-    end
-  end,
-}
-Fk:addSkill(choose_cards_mutlipat_skill)
-
-
-Fk:loadTranslationTable{
-  ["choose_cards_mutlipat_skill"] = "选牌",
-  ["#askForCardByMultiPatterns"] = "选牌",
-}
-
-
-
-
 dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'
+
+local extension = Package:new("utility", Package.SpecialPack)
+extension:loadSkillSkels(require "packages.utility.aux_skills")
+Fk:loadPackage(extension)
 
 return Utility
