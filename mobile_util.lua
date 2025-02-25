@@ -111,7 +111,7 @@ end
 ---@param room Room @ 房间
 ---@param card integer|integer[]|Card|Card[] @ 要加入仁区的牌
 ---@param skillName string @ 移动的技能名
----@param proposer integer @ 移动操作者的id
+---@param proposer Player @ 移动操作者
 Utility.AddToRenPile = function(room, card, skillName, proposer)
   room.logic:addTriggerSkill(RenPileTrigger)
   local ids = Card:getIdList(card)
