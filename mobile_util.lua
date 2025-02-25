@@ -45,14 +45,6 @@ Utility.doStrategy = function(room, from, to, from_choices, to_choices, skillNam
   elseif type(prompts) == "string" then
     prompts = {prompts, prompts}
   end
-  -- local data1 = json.encode({ from_choices, from_choices, skillName, prompts[1], true })
-  -- from.request_data = data1
-  -- local data2 = json.encode({ to_choices, to_choices, skillName, prompts[2], true })
-  -- to.request_data = data2
-  -- room:notifyMoveFocus({from,to}, "AskForChoice")
-  -- room:doBroadcastRequest("AskForChoice", {from,to})
-  -- local from_c = from.reply_ready and from.client_reply or table.random(from_choices)
-  -- local to_c = to.reply_ready and to.client_reply or table.random(to_choices)
   local req = Request:new({from, to}, "AskForChoice")
   req:setData(from, { from_choices, from_choices, skillName, prompts[1], true })
   req:setData(to, { to_choices, to_choices, skillName, prompts[2], true })
@@ -108,13 +100,14 @@ end
 
 
 --- 将一些牌加入仁区
----@param room Room @ 房间
----@param card integer|integer[]|Card|Card[] @ 要加入仁区的牌
----@param skillName string @ 移动的技能名
----@param proposer Player @ 移动操作者
-Utility.AddToRenPile = function(room, card, skillName, proposer)
-  room.logic:addTriggerSkill(RenPileTrigger)
-  local ids = Card:getIdList(card)
+---@param player Player @ 移动操作者
+---@param cards integer|integer[]|Card|Card[] @ 要加入仁区的牌
+---@param skillName? string @ 移动的技能名
+Utility.AddToRenPile = function(player, cards, skillName)
+  local room = player.room
+  skillName = skillName or ""
+  room.logic:addTriggerSkill(Fk.skills["#RenPileTrigger"])
+  local ids = Card:getIdList(cards)
 
   local movesSplitedByOwner = {}
   for _, cardId in ipairs(ids) do
@@ -132,7 +125,7 @@ Utility.AddToRenPile = function(room, card, skillName, proposer)
         moveReason = fk.ReasonJustMove,
         skillName = skillName,
         moveVisible = true,
-        proposer = proposer,
+        proposer = player,
         extra_data = { addtorenpile = true},
       })
     end
@@ -162,7 +155,12 @@ Utility.startZhengsu = function(player, target, skillName, prompt)
   prompt = prompt or ""
   local room = player.room
   local choices = {"zhengsu_leijin", "zhengsu_bianzhen", "zhengsu_mingzhi"}
-  local choice = room:askForChoice(player, choices, skillName, prompt, true)
+  local choice = room:askToChoice(player, {
+    choices = choices,
+    skill_name = skillName,
+    prompt = prompt,
+    detailed = true,
+  })
   local mark_name = "@" .. choice .. "-turn"
   if target:getMark(mark_name) == 0 then
     room:setPlayerMark(target, mark_name, "")
@@ -235,8 +233,8 @@ Utility.getLostCardsFromMove = function(player, data)
   local equipUsing = {}
   local parentUseData = player.room.logic:getCurrentEvent():findParent(GameEvent.UseCard)
   if parentUseData then
-    local use = parentUseData.data[1]
-    if use.card.type == Card.TypeEquip and use.from == player.id then
+    local use = parentUseData.data
+    if use.card.type == Card.TypeEquip and use.from == player then
       equipUsing = Card:getIdList(use.card)
     end
   end
@@ -244,11 +242,11 @@ Utility.getLostCardsFromMove = function(player, data)
   for _, move in ipairs(data) do
     for _, info in ipairs(move.moveInfo) do
       if not table.contains(equipUsing, info.cardId) then
-        if move.from == player.id and (info.fromArea == Card.PlayerHand or info.fromArea == Card.PlayerEquip) then
+        if move.from == player and (info.fromArea == Card.PlayerHand or info.fromArea == Card.PlayerEquip) then
           table.insert(ids, info.cardId)
         end
       else
-        if (move.to ~= player.id or move.toArea ~= Card.PlayerEquip) and info.fromArea == Card.Processing then
+        if (move.to ~= player or move.toArea ~= Card.PlayerEquip) and info.fromArea == Card.Processing then
           table.insert(ids, info.cardId)
         end
       end
