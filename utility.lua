@@ -2200,7 +2200,7 @@ end
 ---@param skillName? string @ 技能名
 ---@param cancelable? boolean @ 能否点取消
 ---@param prompt? string @ 提示信息
----@return integer[] @ 增加或删除的目标列表，第二个值表示是“增加(true/nil)”还是“移除(false)”
+---@return integer[] @ 增加或删除的目标列表
 Utility.askForAddCancelTargets = function (chooser, players, targets, limitAdd, limitSub, skillName, cancelable, prompt)
   if #players == 0 then return {} end
   local others = table.filter(players, function(e) return not table.contains(targets, e) end)
@@ -2235,6 +2235,8 @@ end
 --注册一些通用的TargetTip
 
 -- 用于增加/减少目标的选人函数的TargetTip
+-- extra_data:
+-- targets integer[] @ 可选的玩家id数组
 -- extra_data integer[] @ 卡牌的当前目标，是玩家id数组
 Fk:addTargetTip{
   name = "addandcanceltarget_tip",
