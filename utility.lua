@@ -2071,7 +2071,7 @@ end
 ---@param skillName? string @ 技能名
 ---@param prompt? string @ 提示信息
 ---@param sendLog? boolean @ 是否发Log，默认否
----@return table<integer, string> @ 返回键值表，键为玩家id、值为选项
+---@return table<integer, string> @ 返回键值表，键为Player、值为选项
 Utility.askForJointChoice = function (players, choices, skillName, prompt, sendLog)
   skillName = skillName or "AskForChoice"
   prompt = prompt or "AskForChoice"
@@ -2102,7 +2102,7 @@ Utility.askForJointChoice = function (players, choices, skillName, prompt, sendL
   end
   local ret = {}
   for _, p in ipairs(players) do
-    ret[p.id] = req:getResult(p)
+    ret[p] = req:getResult(p)
   end
   return ret
 end
@@ -2147,7 +2147,7 @@ Utility.askForJointCard = function (players, minNum, maxNum, includeEquip, skill
       if #cards > minNum then
         table.insert(toAsk, p)
       end
-      ret[p.id] = table.random(cards, minNum)
+      ret[p] = table.random(cards, minNum)
     end
     if #toAsk == 0 then
       return ret
@@ -2173,7 +2173,7 @@ Utility.askForJointCard = function (players, minNum, maxNum, includeEquip, skill
 
   for _, p in ipairs(toAsk) do
     req:setData(p, data)
-    req:setDefaultReply(p, ret[p.id] or {})
+    req:setDefaultReply(p, ret[p] or {})
   end
   req:ask()
   for _, p in ipairs(toAsk) do
@@ -2186,7 +2186,7 @@ Utility.askForJointCard = function (players, minNum, maxNum, includeEquip, skill
         ids = result
       end
     end
-    ret[p.id] = ids
+    ret[p] = ids
   end
   return ret
 end
