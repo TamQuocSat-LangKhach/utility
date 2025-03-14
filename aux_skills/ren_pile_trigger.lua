@@ -6,7 +6,7 @@ renPileTrigger:addEffect(fk.AfterCardsMove, {
   priority = 1.001,
   mute = true,
   can_trigger = function(self, event, target, player, data)
-    local renpile = Utility.GetRenPile(player.room)
+    local renpile = player.room:getBanner("@$RenPile") or {}
     if player.seat == 1 then
       for _, move in ipairs(data) do
         if move.toArea == Card.Void and move.extra_data and move.extra_data.addtorenpile then
@@ -21,7 +21,7 @@ renPileTrigger:addEffect(fk.AfterCardsMove, {
   on_cost = Util.TrueFunc,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    local renpile = Utility.GetRenPile(room)
+    local renpile = room:getBanner("@$RenPile") or {}
     for _, move in ipairs(data) do
       local removed
       for _, info in ipairs(move.moveInfo) do

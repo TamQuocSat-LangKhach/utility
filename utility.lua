@@ -56,6 +56,7 @@ end
 ---@param distance_limited? boolean @ 是否受距离限制
 ---@return boolean
 Utility.canTransferTarget = function(target, data, distance_limited)
+  fk.qWarning("Utility.canTransferTarget is deprecated!")
   local room = target.room
   local from = room:getPlayerById(data.from)
   if from:isProhibited(target, data.card) or
@@ -121,6 +122,7 @@ end
 ---@param event Event @ 使用事件的时机（需判断使用TargetGroup还是AimGroup，by smart Ho-spair）
 ---@return integer[] @ 返回目标角色player的id列表
 Utility.getActualUseTargets = function(room, data, event)
+  fk.qWarning("Utility.getActualUseTargets is deprecated! Use UseCardData/AimData:getExtraTargets instead")
   if data.tos == nil then return {} end
   local targets = {}
   local tos = {}
@@ -190,6 +192,7 @@ end
 ---@param skillName string @ 技能名
 ---@param toArea integer? @ 交换牌的目标区域，默认为手牌
 Utility.swapCards = function(room, player, targetOne, targetTwo, cards1, cards2, skillName, toArea)
+  fk.qWarning("Utility.swapCards is deprecated! Use Room:swapAllCards instead")
   toArea = toArea or Card.PlayerHand
   local moveInfos = {}
   if #cards1 > 0 then
@@ -281,6 +284,7 @@ end
 ---@param targetTwo ServerPlayer @ 移动的目标2玩家
 ---@param skillName string @ 技能名
 Utility.swapHandCards = function(room, player, targetOne, targetTwo, skillName)
+  fk.qWarning("Utility.swapHandCards is deprecated! Use Room:swapAllCards instead")
   Utility.swapCards(room, player, targetOne, targetTwo, table.clone(targetOne.player_cards[Player.Hand]),
   table.clone(targetTwo.player_cards[Player.Hand]), skillName)
 end
@@ -294,6 +298,7 @@ end
 ---@param visible? boolean @ 是否明牌移动
 ---@param proposer? integer @ 移动的操作者（默认同player）
 Utility.swapCardsWithPile = function(player, cards1, cards2, skillName, pile_name, visible, proposer)
+  fk.qWarning("Utility.swapCardsWithPile is deprecated! Use Room:swapCardsWithPile instead")
   proposer = proposer or player.id
   visible = (visible ~= nil) and visible or false
   local room = player.room
@@ -543,6 +548,7 @@ end
 ---@param convert? boolean @ 是否可以替换装备（默认可以）
 ---@return boolean 
 Utility.canMoveCardIntoEquip = function(target, cardId, convert)
+  fk.qWarning("Utility.canMoveCardIntoEquip is deprecated! Use Player:canMoveCardIntoEquip instead")
   convert = (convert == nil) and true or convert
   local card = Fk:getCardById(cardId)
   if not (card.sub_type >= 3 and card.sub_type <= 7) then return false end
@@ -562,6 +568,7 @@ end
 ---@param convert? boolean @ 是否可以替换装备（默认可以）
 ---@param proposer? ServerPlayer @ 操作者
 Utility.moveCardIntoEquip = function (room, target, cards, skillName, convert, proposer)
+  fk.qWarning("Utility.moveCardIntoEquip is deprecated! Use Room:moveCardIntoEquip instead")
   convert = (convert == nil) and true or convert
   skillName = skillName or ""
   cards = type(cards) == "table" and cards or {cards}
@@ -602,6 +609,7 @@ Fk:loadTranslationTable{
 ---@param cancelable? boolean @ 是否可取消，默认可以
 ---@return integer[]
 Utility.askForExchange = function(player, name1, name2, cards1, cards2, prompt, n, cancelable)
+  fk.qWarning("Utility.askForExchange is deprecated! Use Room:askToArrangeCards instead")
   return player.room:askForPoxi(player, "qml_exchange", {
     { name1, cards1 },
     { name2, cards2 },
@@ -937,6 +945,7 @@ end
 ---@param data CardUseStruct|integer @ 当前事件的data，或需要查询的使用事件的id
 ---@return boolean
 Utility.IsUsingHandcard = function(player, data)
+  fk.qWarning("Utility.IsUsingHandcard is deprecated! Use UseCardData/RespondCardData:IsUsingHandcard instead")
   local useEvent, cards
   if type(data) == "number" then
     useEvent = player.room.logic.all_game_events[data]
@@ -1119,6 +1128,45 @@ Utility.GetEnemies = function(room, player, include_dead)
       ((p.role:startsWith("warm_") and player.role:startsWith("cool_")) or
       (p.role:startsWith("cool_") and player.role:startsWith("warm_")))
   end)
+end
+
+--- 判断一名角色是否为同族成员——OL宗族技专用
+---@param player Player @ 自己
+---@param target Player @ 待判断的角色
+---@return any @ 如果有确定的家族，返回家族字符串表[]；对于自己必定返回true。否则返回false
+Utility.FamilyMember = function (player, target)
+  if target == player then
+    return true
+  end
+  local family = {}
+  local familyMap = {
+    ["xun"] = {"xunshu", "xunchen", "xuncai", "xuncan", "xunyu", "xunyou"},
+    ["wu"] = {"wuxian", "wuyi", "wuban", "wukuang", "wuqiao"},
+    ["han"] = {"hanshao", "hanrong"},
+    ["wang"] = {"wangyun", "wangling", "wangchang", "wanghun", "wanglun", "wangguang", "wangmingshan", "wangshen"},
+    ["zhong"] = {"zhongyao", "zhongyu", "zhonghui", "zhongyan"},
+  }
+  for f, members in pairs(familyMap) do
+    if table.contains(members, Fk.generals[player.general].trueName) then
+      table.insertIfNeed(family, f)
+    end
+    if player.deputyGeneral ~= "" and table.contains(members, Fk.generals[player.deputyGeneral].trueName) then
+      table.insertIfNeed(family, f)
+    end
+  end
+  if #family == 0 then return false end
+  local ret = {}
+  for _, f in ipairs(family) do
+    local members = familyMap[f]
+    if table.contains(members, Fk.generals[target.general].trueName) then
+      table.insertIfNeed(ret, f)
+    end
+    if target.deputyGeneral ~= "" and table.contains(members, Fk.generals[target.deputyGeneral].trueName) then
+      table.insertIfNeed(ret, f)
+    end
+  end
+  if #ret == 0 then return false end
+  return ret
 end
 
 
@@ -1416,6 +1464,7 @@ end
 ---@param true_name? boolean @ 是否使用真实卡名（即不区分【杀】、【无懈可击】等的具体种类）
 ---@return string[] @ 返回牌名列表
 Utility.getAllCardNames = function(guhuo_type, true_name)
+  fk.qWarning("Utility.getAllCardNames is deprecated! Use Engine:getAllCardNames instead")
   local all_names = {}
   local basics = {}
   local normalTricks = {}
@@ -1465,6 +1514,7 @@ end
 ---@param visibleData? boolean|integer|integer[] @ 控制移动对特定角色可见（默认可见，为false仅对自己可见，为空集均不可见）
 ---@return integer[] @ 返回卡牌id列表
 Utility.turnOverCardsFromDrawPile = function(player, NCards, skillName, visibleData)
+  fk.qWarning("Utility.turnOverCardsFromDrawPile is deprecated! Use Room:turnOverCardsFromDrawPile instead")
   local room = player.room
   local visiblePlayers = nil
   if type(visibleData) == "boolean" then
@@ -1507,6 +1557,7 @@ end
 ---@param toTop? boolean @ 是否移动至牌堆顶（默认是）
 ---@param visibleData? boolean|integer|integer[] @ 控制移动对特定角色可见（默认可见，为false仅对自己可见，为空表均不可见）
 Utility.returnCardsToDrawPile = function(player, cards, skillName, toTop, visibleData)
+  fk.qWarning("Utility.returnCardsToDrawPile is deprecated! Use Room:returnCardsToDrawPile instead")
   local room = player.room
   local to_drawpile = table.filter(cards, function (id)
     return room:getCardArea(id) == Card.Processing
