@@ -255,11 +255,108 @@ Utility.getLostCardsFromMove = function(player, data)
   return ids
 end
 
+Fk:addQmlMark{
+  name = "mou__xieli",
+  qml_path = function(name, value, p)
+    return "packages/utility/qml/XiejiBox"
+  end,
+  how_to_show = function(name, value, p)
+    if type(value) == "table" then
+      local target = Fk:currentRoom():getPlayerById(value[1])
+      if target then return Fk:translate("seat#" .. target.seat) end
+    end
+    return " "
+  end,
+}
 
+---@param player ServerPlayer @ 发起协力的角色
+---@param target ServerPlayer @ 协力的合作角色
+---@return boolean @是否协力成功
+Utility.checkXieli = function (player, target)
+  local room = player.room
+  local mark = player:getTableMark("@[mou__xieli]")
+  if #mark == 0 then return false end
+  local pid = mark[1]
+  if pid == target.id then
+    local choice = mark[2]
+    local event_id = mark[3]
+    if choice == "xieli_tongchou" then
+      local n = 0
+      local events = room.logic:getActualDamageEvents(999, function(e)
+        return e.data.from == player or e.data.from == target
+      end, nil, event_id)
+      for _, e in ipairs(events) do
+        n = n + e.data.damage
+      end
+      return n >= 4
+    elseif choice == "xieli_bingjin" then
+      local n = 0
+      room.logic:getEventsByRule(GameEvent.MoveCards, 999, function(e)
+        for _, move in ipairs(e.data) do
+          if move.moveReason == fk.ReasonDraw and (move.to == player or move.to == target) then
+            for _, info in ipairs(move.moveInfo) do
+              if info.fromArea == Card.DrawPile then
+                n = n + 1
+              end
+            end
+          end
+        end
+        return false
+      end, event_id)
+      return n >= 8
+    elseif choice == "xieli_shucai" then
+      local suits = {}
+      room.logic:getEventsByRule(GameEvent.MoveCards, 999, function(e)
+        for _, move in ipairs(e.data) do
+          if move.moveReason == fk.ReasonDiscard and (move.from == player or move.from == target) then
+            for _, info in ipairs(move.moveInfo) do
+              if info.fromArea == Card.PlayerHand or info.fromArea == Card.PlayerEquip then
+                local suit = Fk:getCardById(info.cardId).suit
+                if suit ~= Card.NoSuit then
+                  table.insertIfNeed(suits, suit)
+                end
+              end
+            end
+          end
+        end
+        return false
+      end, event_id)
+      return #suits == 4
+    elseif choice == "xieli_luli" then
+      local suits = {}
+      room.logic:getEventsByRule(GameEvent.UseCard, 999, function(e)
+        local use = e.data
+        if use.from == player or use.from == target then
+          local suit = use.card.suit
+          if suit ~= Card.NoSuit then
+            table.insertIfNeed(suits, suit)
+          end
+        end
+      end, event_id)
+      if #suits == 4 then return true end
+      room.logic:getEventsByRule(GameEvent.RespondCard, 999, function(e)
+        local resp = e.data
+        if resp.from == player or resp.from == target then
+          local suit = resp.card.suit
+          if suit ~= Card.NoSuit then
+            table.insertIfNeed(suits, suit)
+          end
+        end
+      end, event_id)
+      return #suits == 4
+    end
+  end
+  return false
+end
 
-
-
-
-
-
-
+Fk:loadTranslationTable{
+  ["@[mou__xieli]"] = "协力",
+  ["xieli_tongchou"] = "同仇",
+  [":xieli_tongchou"] = "你与其造成的伤害值之和不小于4",
+  ["xieli_bingjin"] = "并进",
+  [":xieli_bingjin"] = "你与其总计摸过至少8张牌",
+  ["xieli_shucai"] = "疏财",
+  [":xieli_shucai"] = "你与其弃置的牌中包含4种花色",
+  ["xieli_luli"] = "勠力",
+  [":xieli_luli"] = "你与其使用或打出的牌中包含4种花色",
+}
