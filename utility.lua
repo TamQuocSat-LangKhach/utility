@@ -15,6 +15,7 @@ local Utility = require 'packages/utility/_base'
 ---@param end_id? integer @ 查询历史范围：从最后的事件开始逆序查找直到id为end_id的事件（不含），缺省值为当前移动事件的id
 ---@return integer[] @ 返回满足条件的卡牌的id列表
 Utility.moveCardsHoldingAreaCheck = function(room, cards, end_id)
+  fk.qWarning("Utility.moveCardsHoldingAreaCheck is deprecated! Use Room.logic:moveCardsHoldingAreaCheck instead")
   if #cards == 0 then return {} end
   if end_id == nil then
     local move_event = room.logic:getCurrentEvent():findParent(GameEvent.MoveCards, true)
@@ -1140,11 +1141,12 @@ Utility.FamilyMember = function (player, target)
   end
   local family = {}
   local familyMap = {
-    ["xun"] = {"xunshu", "xunchen", "xuncai", "xuncan", "xunyu", "xunyou"},
-    ["wu"] = {"wuxian", "wuyi", "wuban", "wukuang", "wuqiao"},
-    ["han"] = {"hanshao", "hanrong"},
-    ["wang"] = {"wangyun", "wangling", "wangchang", "wanghun", "wanglun", "wangguang", "wangmingshan", "wangshen"},
-    ["zhong"] = {"zhongyao", "zhongyu", "zhonghui", "zhongyan"},
+    ["yingchuan_xun"] = {"xunshu", "xunchen", "xuncai", "xuncan", "xunyu", "xunyou"},
+    ["chenliu_wu"] = {"wuxian", "wuyi", "wuban", "wukuang", "wuqiao"},
+    ["yingchuan_han"] = {"hanshao", "hanrong"},
+    ["taiyuan_wang"] = {"wangyun", "wangling", "wangchang", "wanghun", "wanglun", "wangguang", "wangmingshan", "wangshen"},
+    ["yingchuan_zhong"] = {"zhongyao", "zhongyu", "zhonghui", "zhongyan"},
+    ["hongnong_yang"] = {"yangci", "yangbiao", "yangxiu", "yangjun", "yangyan", "yangzhi"},
   }
   for f, members in pairs(familyMap) do
     if table.contains(members, Fk.generals[player.general].trueName) then
@@ -1169,6 +1171,51 @@ Utility.FamilyMember = function (player, target)
   return ret
 end
 
+--- 改变一名角色的转换技状态，自动转换插画阴阳形态
+---@param player ServerPlayer @ 自己
+---@param skillName string @ 转换技技能名
+---@param switch_state integer? @ 要切换到的状态，不填则默认与当前状态不同
+---@param prefix string[]? @ 要检测的武将前缀{阳形态前缀, 阴形态前缀}，不填则默认检测 {"tymou__", "tymou2__"}
+---@return any @ 
+Utility.SetSwitchSkillState = function (player, skillName, switch_state, prefix)
+  assert(prefix == nil or #prefix == 2, "prefix error")
+  if switch_state == nil then
+    switch_state = player:getSwitchSkillState(skillName, true)
+  end
+  if player:getSwitchSkillState(skillName, true) == switch_state then
+    player.room:setPlayerMark(player, MarkEnum.SwithSkillPreName .. skillName, switch_state)
+    player:setSkillUseHistory(skillName, 0, Player.HistoryGame)
+  end
+
+  prefix = prefix or {"tymou__", "tymou2__"}
+  local generalName = nil
+  if player.general:startsWith(prefix[1]) and
+    table.contains(Fk.generals[player.general]:getSkillNameList(), skillName) then
+    generalName = player.general
+  end
+  if generalName == nil then
+    if player.deputyGeneral ~= "" then
+      if player.deputyGeneral:startsWith(prefix[1]) and
+        table.contains(Fk.generals[player.deputyGeneral]:getSkillNameList(), skillName) then
+        generalName = player.deputyGeneral
+      end
+    end
+  end
+  if generalName == nil then return end
+  local name = Fk.generals[generalName].trueName
+  if generalName:startsWith(prefix[1]) then
+    name = prefix[2] .. name
+  else
+    name = prefix[1] .. name
+  end
+  if generalName == player.deputyGeneral then
+    player.deputyGeneral = name
+    player.room:broadcastProperty(player, "deputyGeneral")
+  else
+    player.general = name
+    player.room:broadcastProperty(player, "general")
+  end
+end
 
 -- 卡牌标记 进入弃牌堆销毁 例OL蒲元
 MarkEnum.DestructIntoDiscard = "__destr_discard"
