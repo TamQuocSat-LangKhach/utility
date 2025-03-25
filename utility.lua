@@ -1173,40 +1173,42 @@ end
 
 --- 改变一名角色的转换技状态，自动转换插画阴阳形态
 ---@param player ServerPlayer @ 自己
----@param skillName string @ 转换技技能名
+---@param skill_name string @ 转换技技能名
 ---@param switch_state integer? @ 要切换到的状态，不填则默认与当前状态不同
 ---@param prefix string[]? @ 要检测的武将前缀{阳形态前缀, 阴形态前缀}，不填则默认检测 {"tymou__", "tymou2__"}
 ---@return any @ 
-Utility.SetSwitchSkillState = function (player, skillName, switch_state, prefix)
+Utility.SetSwitchSkillState = function (player, skill_name, switch_state, prefix)
   assert(prefix == nil or #prefix == 2, "prefix error")
   if switch_state == nil then
-    switch_state = player:getSwitchSkillState(skillName, true)
+    switch_state = player:getSwitchSkillState(skill_name, true)
   end
-  if player:getSwitchSkillState(skillName, true) == switch_state then
-    player.room:setPlayerMark(player, MarkEnum.SwithSkillPreName .. skillName, switch_state)
-    player:setSkillUseHistory(skillName, 0, Player.HistoryGame)
+  if player:getSwitchSkillState(skill_name, true) == switch_state then
+    player.room:setPlayerMark(player, MarkEnum.SwithSkillPreName .. skill_name, switch_state)
+    player:setSkillUseHistory(skill_name, 0, Player.HistoryGame)
   end
 
   prefix = prefix or {"tymou__", "tymou2__"}
   local generalName = nil
-  if player.general:startsWith(prefix[1]) and
-    table.contains(Fk.generals[player.general]:getSkillNameList(), skillName) then
-    generalName = player.general
-  end
-  if generalName == nil then
-    if player.deputyGeneral ~= "" then
-      if player.deputyGeneral:startsWith(prefix[1]) and
-        table.contains(Fk.generals[player.deputyGeneral]:getSkillNameList(), skillName) then
-        generalName = player.deputyGeneral
+  for _, str in ipairs(prefix) do
+    if player.general:startsWith(str) and
+      table.contains(Fk.generals[player.general]:getSkillNameList(), skill_name) then
+      generalName = player.general
+    end
+    if generalName == nil then
+      if player.deputyGeneral ~= "" then
+        if player.deputyGeneral:startsWith(str) and
+          table.contains(Fk.generals[player.deputyGeneral]:getSkillNameList(), skill_name) then
+          generalName = player.deputyGeneral
+        end
       end
     end
   end
   if generalName == nil then return end
   local name = Fk.generals[generalName].trueName
-  if generalName:startsWith(prefix[1]) then
-    name = prefix[2] .. name
-  else
+  if switch_state == fk.SwitchYang then
     name = prefix[1] .. name
+  else
+    name = prefix[2] .. name
   end
   if generalName == player.deputyGeneral then
     player.deputyGeneral = name
