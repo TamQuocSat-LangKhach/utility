@@ -1555,14 +1555,11 @@ Utility.clearHandMark = function(player, name)
   end
 end
 
-
-
-
---- DiscussionStruct 议事的数据
----@class DiscussionStruct
+--- DiscussionData 议事的数据
+---@class DiscussionDataSpec
 ---@field public from ServerPlayer @ 发起议事的角色
 ---@field public tos ServerPlayer[] @ 参与议事的角色
----@field public results table<integer, DiscussionResult> @ 结果
+---@field public results table<ServerPlayer, DiscussionResult> @ 结果
 ---@field public color string @ 议事结果
 ---@field public reason string @ 议事原因
 
@@ -1572,10 +1569,42 @@ end
 ---@field public opinion string @ 议事意见
 ---@field public opinions string[] @ 议事意见汇总
 
+---@class Utility.DiscussionData: DiscussionDataSpec, TriggerData
+Utility.DiscussionData = TriggerData:subclass("DiscussionData")
+
+--- 议事 TriggerEvent
+---@class Utility.DiscussionTE: TriggerEvent
+---@field public data Utility.DiscussionData
+Utility.DiscussionTE = TriggerEvent:subclass("DiscussionEvent")
+
+--- 议事开始
+---@class Utility.StartDiscussion: Utility.DiscussionTE
+Utility.StartDiscussion = Utility.DiscussionTE:subclass("Utility.StartDiscussion")
+--- 议事牌展示后
+---@class Utility.DiscussionCardsDisplayed: Utility.DiscussionTE
+Utility.DiscussionCardsDisplayed = Utility.DiscussionTE:subclass("Utility.DiscussionCardsDisplayed")
+--- 议事结果确定时
+---@class Utility.DiscussionResultConfirming: Utility.DiscussionTE
+Utility.DiscussionResultConfirming = Utility.DiscussionTE:subclass("Utility.DiscussionResultConfirming")
+--- 议事结果确定后
+---@class Utility.DiscussionResultConfirmed: Utility.DiscussionTE
+Utility.DiscussionResultConfirmed = Utility.DiscussionTE:subclass("Utility.DiscussionResultConfirmed")
+--- 议事结束后
+---@class Utility.DiscussionFinished: Utility.DiscussionTE
+Utility.DiscussionFinished = Utility.DiscussionTE:subclass("Utility.DiscussionFinished")
+
+---@alias DiscussionTrigFunc fun(self: TriggerSkill, event: Utility.DiscussionTE,
+---  target: ServerPlayer, player: ServerPlayer, data: H.GeneralRemoveData):any
+
+---@class SkillSkeleton
+---@field public addEffect fun(self: SkillSkeleton, key: Utility.DiscussionTE,
+---  data: TrigSkelSpec<DiscussionTrigFunc>, attr: TrigSkelAttribute?): SkillSkeleton
+
+--- 议事 GameEvent
 Utility.DiscussionEvent = "GameEvent.Discussion"
 
 Fk:addGameEvent(Utility.DiscussionEvent, nil, function (self)
-  local discussionData = table.unpack(self.data) ---@class discussionData
+  local discussionData = self.data ---@class DiscussionDataSpec
   local room = self.room ---@type Room
   local logic = room.logic
   local from = discussionData.from
@@ -1588,14 +1617,14 @@ Fk:addGameEvent(Utility.DiscussionEvent, nil, function (self)
     }
   end
   discussionData.color = "noresult"
-  discussionData.results = {}
+  discussionData.results = {} ---@type table<ServerPlayer, DiscussionResult>
 
-  logic:trigger("fk.StartDiscussion", from, discussionData)
+  logic:trigger(Utility.StartDiscussion, from, discussionData)
 
 
-  local targets = {}
+  local targets = {} ---@type ServerPlayer[]
   for _, to in ipairs(discussionData.tos) do
-    if not (discussionData.results[to.id] and discussionData.results[to.id].opinion) then
+    if not (discussionData.results[to] and discussionData.results[to].opinion) then
       table.insert(targets, to)
     end
   end
@@ -1616,7 +1645,7 @@ Fk:addGameEvent(Utility.DiscussionEvent, nil, function (self)
     end
     req:ask()
     for _, p in ipairs(targets) do
-      discussionData.results[p.id] = discussionData.results[p.id] or {}
+      discussionData.results[p] = discussionData.results[p] or {}
       local result = req:getResult(p)
       if result ~= "" then
         local id
@@ -1625,35 +1654,35 @@ Fk:addGameEvent(Utility.DiscussionEvent, nil, function (self)
         else
           id = result[1]
         end
-        discussionData.results[p.id].toCards = {id}
-        discussionData.results[p.id].opinion = Fk:getCardById(id):getColorString()
+        discussionData.results[p].toCards = {id}
+        discussionData.results[p].opinion = Fk:getCardById(id):getColorString()
       end
     end
   end
 
   for _, p in ipairs(discussionData.tos) do
-    discussionData.results[p.id] = discussionData.results[p.id] or {}
+    discussionData.results[p] = discussionData.results[p] or {}
 
-    if discussionData.results[p.id].toCards then
-      p:showCards(discussionData.results[p.id].toCards)
+    if discussionData.results[p].toCards then
+      p:showCards(discussionData.results[p].toCards)
     end
 
-    if discussionData.results[p.id].opinion then
+    if discussionData.results[p].opinion then
       room:sendLog{
         type = "#SendDiscussionOpinion",
         from = p.id,
-        arg = discussionData.results[p.id].opinion,
+        arg = discussionData.results[p].opinion,
         toast = true,
       }
     end
   end
-  logic:trigger("fk.DiscussionCardsDisplayed", nil, discussionData)
+  logic:trigger(Utility.DiscussionCardsDisplayed, nil, discussionData)
 
   discussionData.opinions = {}
-  for toId, result in pairs(discussionData.results) do
+  for to, result in pairs(discussionData.results) do
     discussionData.opinions[result.opinion] = (discussionData.opinions[result.opinion] or 0) + 1
   end
-  logic:trigger("fk.DiscussionResultConfirming", from, discussionData)
+  logic:trigger(Utility.DiscussionResultConfirming, from, discussionData)
 
   local max, result = 0, {}
   for color, count in pairs(discussionData.opinions) do
@@ -1677,9 +1706,9 @@ Fk:addGameEvent(Utility.DiscussionEvent, nil, function (self)
     toast = true,
   }
 
-  logic:trigger("fk.DiscussionResultConfirmed", from, discussionData)
+  logic:trigger(Utility.DiscussionResultConfirmed, from, discussionData)
 
-  if logic:trigger("fk.DiscussionFinished", from, discussionData) then
+  if logic:trigger(Utility.DiscussionFinished, from, discussionData) then
     logic:breakEvent()
   end
   if not self.interrupted then return end
@@ -1698,9 +1727,9 @@ Fk:loadTranslationTable{
 ---@param tos ServerPlayer[] @ 参与议事的角色
 ---@param reason string? @ 议事技能名
 ---@param extra_data any? @ extra_data
----@return DiscussionStruct
+---@return Utility.DiscussionData
 Utility.Discussion = function(player, tos, reason, extra_data)
-  local discussionData = {
+  local discussionData = Utility.DiscussionData:new{
     from = player,
     tos = tos,
     reason = reason or "AskForDiscussion",
@@ -1712,155 +1741,175 @@ Utility.Discussion = function(player, tos, reason, extra_data)
   return discussionData
 end
 
---- JointPindianStruct 共同拼点的数据
----@class JointPindianStruct
+--- JointPindianData 共同拼点的数据
+---@class JointPindianDataSpec
 ---@field public from ServerPlayer @ 拼点发起者
 ---@field public tos ServerPlayer[] @ 拼点目标
----@field public fromCard Card @ 拼点发起者拼点牌
----@field public results table<integer, PindianResult> @ 结果
----@field public winner ServerPlayer @ 拼点胜利者
----@field public reason string @ 拼点原因
+---@field public fromCard? Card @ 拼点发起者的初始拼点牌
+---@field public results table<ServerPlayer, PindianResult> @ 结果
+---@field public winner? ServerPlayer @ 拼点胜利者，可能不存在
+---@field public reason string @ 拼点原因，一般为技能名
 
+---@class Utility.JointPindianData: JointPindianDataSpec, PindianData
+Utility.JointPindianData = PindianData:subclass("JointPindianData")
+
+--- 共同拼点 GameEvent
 Utility.JointPindianEvent = "GameEvent.JointPindian"
 
 Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
-  local pindianData = table.unpack(self.data) ---@class PindianStruct
-  local room = self.room ---@class Room
+  local pindianData = self.data ---@type JointPindianDataSpec
+  local room = self.room ---@type Room
   local logic = room.logic
-  logic:trigger(fk.StartPindian, pindianData.from, pindianData)
-  local skillName = pindianData.reason or "pindian"
+  local from = pindianData.from
+  local results = pindianData.results
+  for _, to in pairs(pindianData.tos) do
+    results[to] = results[to] or {}
+  end
+
+  logic:trigger(fk.StartPindian, from, pindianData)
 
   if pindianData.reason ~= "" then
     room:sendLog{
       type = "#StartPindianReason",
-      from = pindianData.from.id,
-      arg = skillName,
+      from = from.id,
+      arg = pindianData.reason,
     }
   end
 
+  -- 将拼点牌变为虚拟牌
+  local virtualize = function (card)
+    local _card = card:clone(card.suit, card.number)
+    if card:getEffectiveId() then
+      _card.subcards = { card:getEffectiveId() }
+    end
+    card = _card
+  end
+
+  ---@type ServerPlayer[]
   local targets = {}
   local moveInfos = {}
-  if not pindianData.fromCard then
-    table.insert(targets, pindianData.from)
-  else
-    local _pindianCard = pindianData.fromCard
-    local pindianCard = _pindianCard:clone(_pindianCard.suit, _pindianCard.number)
-    pindianCard:addSubcard(_pindianCard.id)
-
-    pindianData.fromCard = pindianCard
-
-    table.insert(moveInfos, {
-      ids = { _pindianCard.id },
-      from = room:getCardOwner(_pindianCard.id).id,
-      fromArea = room:getCardArea(_pindianCard.id),
-      toArea = Card.Processing,
-      moveReason = fk.ReasonPut,
-      skillName = pindianData.reason,
-      moveVisible = true,
-    })
-  end
-  for _, to in ipairs(pindianData.tos) do
-    if pindianData.results[to.id] and pindianData.results[to.id].toCard then
-      local _pindianCard = pindianData.results[to.id].toCard
-      local pindianCard = _pindianCard:clone(_pindianCard.suit, _pindianCard.number)
-      pindianCard:addSubcard(_pindianCard.id)
-
-      pindianData.results[to.id].toCard = pindianCard
-
+  if pindianData.fromCard then
+    virtualize(pindianData.fromCard)
+    local cid = pindianData.fromCard:getEffectiveId()
+    if cid and room:getCardArea(cid) ~= Card.Processing then
       table.insert(moveInfos, {
-        ids = { _pindianCard.id },
-        from = room:getCardOwner(_pindianCard.id).id,
-        fromArea = room:getCardArea(_pindianCard.id),
+        ids = { cid },
+        from = room.owner_map[cid],
         toArea = Card.Processing,
         moveReason = fk.ReasonPut,
         skillName = pindianData.reason,
         moveVisible = true,
       })
-    else
+    end
+  elseif not from:isKongcheng() then
+    table.insert(targets, from)
+  end
+  for _, to in ipairs(pindianData.tos) do
+    if results[to] and results[to].toCard then
+      virtualize(results[to].toCard)
+
+      local cid = results[to].toCard:getEffectiveId()
+      if cid and room:getCardArea(cid) ~= Card.Processing then
+        table.insert(moveInfos, {
+          ids = { cid },
+          from = room.owner_map[cid],
+          toArea = Card.Processing,
+          moveReason = fk.ReasonPut,
+          skillName = pindianData.reason,
+          moveVisible = true,
+        })
+      end
+    elseif not to:isKongcheng() then
       table.insert(targets, to)
     end
   end
 
-  local req = Request:new(targets, "AskForUseActiveSkill")
-  req.focus_text = skillName
-  local data = {
-    "choose_cards_skill",
-    "#askForPindian:::" .. skillName,
-    false,
-    {
+  if #targets ~= 0 then
+    local extraData = {
       num = 1,
       min_num = 1,
       include_equip = false,
-      skillName = skillName,
-      pattern = ".|.|.|hand",
-    },
-  }
-
-  for _, p in ipairs(targets) do
-    req:setData(p, data)
-    local cards = table.random(p:getCardIds("h"), 1)
-    req:setDefaultReply(p, cards)
-  end
-  req:ask()
-  local ret = {}
-  for _, p in ipairs(targets) do
-    local result = req:getResult(p)
-    local ids = {}
-    if result.card then
-      ids = result.card.subcards
-    else
-      ids = result
-    end
-    local _pindianCard = Fk:getCardById(ids[1])
-    local pindianCard = _pindianCard:clone(_pindianCard.suit, _pindianCard.number)
-    pindianCard:addSubcard(_pindianCard.id)
-
-    if p == pindianData.from then
-      pindianData.fromCard = pindianCard
-    else
-      pindianData.results[p.id] = pindianData.results[p.id] or {}
-      pindianData.results[p.id].toCard = pindianCard
-    end
-
-    table.insert(moveInfos, {
-      ids = { _pindianCard.id },
-      from = p.id,
-      toArea = Card.Processing,
-      moveReason = fk.ReasonPut,
-      skillName = pindianData.reason,
-      moveVisible = true,
-    })
-
-    room:sendLog{
-      type = "#ShowPindianCard",
-      from = p.id,
-      arg = _pindianCard:toLogString(),
+      pattern = ".",
+      reason = pindianData.reason,
     }
+    local prompt = "#askForPindian:::" .. pindianData.reason
+    local req_data = { "choose_cards_skill", prompt, false, extraData }
+
+    local req = Request:new(targets, "AskForUseActiveSkill")
+    for _, to in ipairs(targets) do
+      req:setData(to, req_data)
+      req:setDefaultReply(to, {card = {subcards = {to:getCardIds(Player.Hand)[1]}}})
+    end
+    req.focus_text = "AskForPindian"
+
+    for _, to in ipairs(targets) do
+      local result = req:getResult(to)
+      local card = Fk:getCardById(result.card.subcards[1])
+
+      virtualize(card)
+
+      if to == from then
+        pindianData.fromCard = card
+      else
+        pindianData.results[to].toCard = card
+      end
+
+      table.insert(moveInfos, {
+        ids = { card:getEffectiveId() },
+        from = to,
+        toArea = Card.Processing,
+        moveReason = fk.ReasonPut,
+        skillName = pindianData.reason,
+        moveVisible = true,
+      })
+
+      room:sendLog{
+        type = "#ShowPindianCard",
+        from = to.id,
+        arg = card:toLogString(),
+      }
+    end
   end
 
-  room:moveCards(table.unpack(moveInfos))
+  if #moveInfos > 0 then
+    room:moveCards(table.unpack(moveInfos))
+  end
+
+  local cid = pindianData.fromCard:getEffectiveId()
+  if cid then
+    room:sendFootnote({ cid }, {
+      type = "##PindianCard",
+      from = from.id,
+    })
+  end
+  for _, to in ipairs(pindianData.tos) do
+    cid = pindianData.results[to].toCard:getEffectiveId()
+    if cid then
+      room:sendFootnote({ cid }, {
+        type = "##PindianCard",
+        from = to.id,
+      })
+    end
+  end
 
   logic:trigger(fk.PindianCardsDisplayed, nil, pindianData)
 
   table.removeOne(targets, pindianData.from)
-  local pdNum = {}
-  pdNum[pindianData.from.id] = pindianData.fromCard.number
-  for _, p in ipairs(targets) do
-    pdNum[p.id] = pindianData.results[p.id].toCard.number
+  local pdNum = {} ---@type table<ServerPlayer, integer> @ 所有角色的点数
+  pdNum[pindianData.from] = pindianData.fromCard.number
+  for _, p in ipairs(pindianData.tos) do
+    pdNum[p] = pindianData.results[p].toCard.number
   end
-  local winner, num
+  local winner, num = nil, -1 ---@type ServerPlayer?, integer
   for k, v in pairs(pdNum) do
-    if not num or num < v then
+    if num < v then
       num = v
       winner = k
     elseif num == v then
       winner = nil
     end
   end
-  if winner then
-    winner = room:getPlayerById(winner) ---@type ServerPlayer
-    pindianData.winner = winner
-  end
+  pindianData.winner = winner
   room:sendLog{
     type = "#ShowPindianResult",
     from = pindianData.from.id,
@@ -1880,12 +1929,11 @@ Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
   else
     room:sendLog{
       type = "#JointPindianNoWinner",
-      arg = skillName,
+      arg = pindianData.reason,
       toast = true,
     }
   end
-  for toId, result in pairs(pindianData.results) do
-    local to = room:getPlayerById(toId)
+  for to, result in pairs(pindianData.results) do
     result.winner = winner
     local singlePindianData = {
       from = pindianData.from,
@@ -1902,25 +1950,25 @@ Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
     logic:breakEvent()
   end
 end, function (self)
-  local pindianData = table.unpack(self.data)
+  local data = self.data
   local room = self.room
 
-  local toProcessingArea = {}
-  local leftFromCardIds = room:getSubcardsByRule(pindianData.fromCard, { Card.Processing })
-  if #leftFromCardIds > 0 then
-    table.insertTable(toProcessingArea, leftFromCardIds)
+  local toThrow = {}
+  local cid = data.fromCard and data.fromCard:getEffectiveId()
+  if cid and room:getCardArea(cid) == Card.Processing then
+    table.insert(toThrow, cid)
   end
 
-  for _, result in pairs(pindianData.results) do
-    local leftToCardIds = room:getSubcardsByRule(result.toCard, { Card.Processing })
-    if #leftToCardIds > 0 then
-      table.insertTable(toProcessingArea, leftToCardIds)
+  for _, result in pairs(data.results) do
+    cid = result.toCard and result.toCard:getEffectiveId()
+    if cid and room:getCardArea(cid) == Card.Processing then
+      table.insertIfNeed(toThrow, cid)
     end
   end
 
-  if #toProcessingArea > 0 then
+  if #toThrow > 0 then
     room:moveCards({
-      ids = toProcessingArea,
+      ids = toThrow,
       toArea = Card.DiscardPile,
       moveReason = fk.ReasonPutIntoDiscardPile,
     })
@@ -1936,9 +1984,16 @@ Fk:loadTranslationTable{
 ---@param tos ServerPlayer[]
 ---@param skillName string
 ---@param initialCard? Card
----@return JointPindianStruct
+---@return Utility.JointPindianData
 Utility.jointPindian = function(player, tos, skillName, initialCard)
-  local pindianData = { from = player, tos = tos, reason = skillName, fromCard = initialCard, results = {}, winner = nil }
+  local pindianData = Utility.JointPindianData:new{
+    from = player,
+    tos = tos,
+    reason = skillName,
+    fromCard = initialCard,
+    results = {},
+    winner = nil
+  }
   local event = GameEvent[Utility.JointPindianEvent]:create(pindianData)
   -- local event = GameEvent:new(Utility.JointPindianEvent, pindianData)
   local _, ret = event:exec()
