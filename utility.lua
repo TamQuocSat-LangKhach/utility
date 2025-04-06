@@ -83,6 +83,7 @@ end
 ---@param bypass_distances? boolean @ 是否无距离限制。默认受限制
 ---@return table<integer>? @ 返回表，元素为目标角色的id。返回nil则为没有合法目标，返回空表即代表此牌不能手动选择目标
 Utility.getDefaultTargets = function(player, card, bypass_times, bypass_distances)
+  fk.qWarning("Utility.getDefaultTargets is deprecated! Use Card:getAvailableTargets or Card:getDefaultTarget instead")
   local room = Fk:currentRoom()
   local canUse = card.skill:canUse(player, card, { bypass_times = bypass_times, bypass_distances = bypass_distances }) and not player:prohibitUse(card)
   if not canUse then return end
@@ -123,7 +124,7 @@ end
 ---@param event Event @ 使用事件的时机（需判断使用TargetGroup还是AimGroup，by smart Ho-spair）
 ---@return integer[] @ 返回目标角色player的id列表
 Utility.getActualUseTargets = function(room, data, event)
-  fk.qWarning("Utility.getActualUseTargets is deprecated! Use UseCardData/AimData:getExtraTargets instead")
+  fk.qWarning("Utility.getActualUseTargets is deprecated!")
   if data.tos == nil then return {} end
   local targets = {}
   local tos = {}
@@ -145,9 +146,10 @@ end
 -- 规则集描述为目标角色数为1，是不包括死亡角色且不计算重复目标的
 ---@param player ServerPlayer|integer @ 目标角色
 ---@param data CardUseStruct @ 使用事件的data
----@param event Event @ 使用事件的时机（需判断使用TargetGroup还是AimGroup，by smart Ho-spair）
+---@param event Event @ 使用事件的时机（需判断使用TargetGroup还是AimGroup）
 ---@return boolean
 Utility.isOnlyTarget = function(player, data, event)
+  fk.qWarning("Utility.isOnlyTarget is deprecated! Use AimData:isOnlyTarget or UseCardData:isOnlyTarget instead")
   if data.tos == nil then return false end
   local tos = {}
   if table.contains({ fk.TargetSpecifying, fk.TargetConfirming, fk.TargetSpecified, fk.TargetConfirmed }, event) then
@@ -1056,6 +1058,7 @@ end
 ---@param skipUse? boolean @ 是否跳过使用。默认不跳过
 ---@return CardUseStruct|nil @ 返回卡牌使用框架
 Utility.askForPlayCard = function(room, player, cards, pattern, skillName, prompt, extra_data, skipUse)
+  fk.qWarning("Utility.askForPlayCard is deprecated! Use Room:askToPlayCard instead")
   cards = cards or player:getHandlyIds(true)
   pattern = pattern or "."
   skillName = skillName or "#askForPlayCard"
@@ -1147,6 +1150,7 @@ Utility.FamilyMember = function (player, target)
     ["taiyuan_wang"] = {"wangyun", "wangling", "wangchang", "wanghun", "wanglun", "wangguang", "wangmingshan", "wangshen"},
     ["yingchuan_zhong"] = {"zhongyao", "zhongyu", "zhonghui", "zhongyan"},
     ["hongnong_yang"] = {"yangci", "yangbiao", "yangxiu", "yangjun", "yangyan", "yangzhi"},
+    ["wujun_lu"] = {"luji", "luxun", "lukang", "luyusheng", "lukai"},
   }
   for f, members in pairs(familyMap) do
     if table.contains(members, Fk.generals[player.general].trueName) then
@@ -1484,6 +1488,7 @@ end
 ---@param ban_cards? string[] @ 被排除的卡名
 ---@return string[] @ 返回牌名列表
 Utility.getViewAsCardNames = function(player, skill_name, card_names, subcards, ban_cards)
+  fk.qWarning("Utility.getViewAsCardNames is deprecated! Use Player:getViewAsCardNames instead")
   ban_cards = ban_cards or {}
   if Fk.currentResponsePattern == nil then
     return table.filter(card_names, function (name)
@@ -2146,6 +2151,7 @@ end
 ---@param sendLog? boolean @ 是否发Log，默认否
 ---@return table<integer, string> @ 返回键值表，键为Player、值为选项
 Utility.askForJointChoice = function (players, choices, skillName, prompt, sendLog)
+  fk.qWarning("Utility.askForJointChoice is deprecated! Use Room:askToJointChoice instead")
   skillName = skillName or "AskForChoice"
   prompt = prompt or "AskForChoice"
 
@@ -2196,6 +2202,7 @@ Fk:loadTranslationTable{
 ---@param discard_skill? boolean @ 是否是弃牌，默认否（在这个流程中牌不会被弃掉，仅用作禁止弃置技判断）
 ---@return table<integer, integer[]> @ 返回键值表，键为玩家id、值为选择的id列表
 Utility.askForJointCard = function (players, minNum, maxNum, includeEquip, skillName, cancelable, pattern, prompt, expand_pile, discard_skill)
+  fk.qWarning("Utility.askForJointCard is deprecated! Use Room:askToJointCard instead")
   skillName = skillName or "AskForCardChosen"
   cancelable = (cancelable == nil) and true or cancelable
   pattern = pattern or "."
@@ -2275,6 +2282,7 @@ end
 ---@param prompt? string @ 提示信息
 ---@return integer[] @ 增加或删除的目标列表
 Utility.askForAddCancelTargets = function (chooser, players, targets, limitAdd, limitSub, skillName, cancelable, prompt)
+  fk.qWarning("Utility.askForAddCancelTargets is deprecated!")
   if #players == 0 then return {} end
   local others = table.filter(players, function(e) return not table.contains(targets, e) end)
   limitAdd = limitAdd or {0, #others}
