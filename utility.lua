@@ -1754,12 +1754,13 @@ end
 ---@field public results table<ServerPlayer, PindianResult> @ 结果
 ---@field public winner? ServerPlayer @ 拼点胜利者，可能不存在
 ---@field public reason string @ 拼点原因，一般为技能名
+---@field public subType? string @ 共同拼点子类，如“逐鹿”
 
 ---@class Utility.JointPindianData: JointPindianDataSpec, PindianData
 Utility.JointPindianData = PindianData:subclass("JointPindianData")
 
 --- 共同拼点 GameEvent
-Utility.JointPindianEvent = "GameEvent.JointPindian"
+Utility.JointPindianEvent = "JointPindian"
 
 Fk:addGameEvent(Utility.JointPindianEvent, nil, function (self)
   local pindianData = self.data ---@type JointPindianDataSpec
@@ -1990,14 +1991,15 @@ Fk:loadTranslationTable{
 ---@param skillName string
 ---@param initialCard? Card
 ---@return Utility.JointPindianData
-Utility.jointPindian = function(player, tos, skillName, initialCard)
+Utility.jointPindian = function(player, tos, skillName, initialCard, subType)
   local pindianData = Utility.JointPindianData:new{
     from = player,
     tos = tos,
     reason = skillName,
     fromCard = initialCard,
     results = {},
-    winner = nil
+    winner = nil,
+    subType = subType,
   }
   local event = GameEvent[Utility.JointPindianEvent]:create(pindianData)
   -- local event = GameEvent:new(Utility.JointPindianEvent, pindianData)
@@ -2005,6 +2007,9 @@ Utility.jointPindian = function(player, tos, skillName, initialCard)
   return pindianData
 end
 
+Utility.startZhuLu = function(player, tos, skillName, initialCard)
+  return Utility.jointPindian(player, tos, skillName, initialCard, "zhulu")
+end
 
 --- 竞争询问一名角色弃牌。可以取消。默认跳过弃牌
 ---@param room Room
