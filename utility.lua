@@ -1606,7 +1606,7 @@ Utility.DiscussionFinished = Utility.DiscussionTE:subclass("Utility.DiscussionFi
 ---  data: TrigSkelSpec<DiscussionTrigFunc>, attr: TrigSkelAttribute?): SkillSkeleton
 
 --- 议事 GameEvent
-Utility.DiscussionEvent = "GameEvent.Discussion"
+Utility.DiscussionEvent = "Discussion"
 
 Fk:addGameEvent(Utility.DiscussionEvent, nil, function (self)
   local discussionData = self.data ---@class DiscussionDataSpec
