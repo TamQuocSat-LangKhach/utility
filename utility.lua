@@ -1599,7 +1599,7 @@ Utility.DiscussionResultConfirmed = Utility.DiscussionTE:subclass("Utility.Discu
 Utility.DiscussionFinished = Utility.DiscussionTE:subclass("Utility.DiscussionFinished")
 
 ---@alias DiscussionTrigFunc fun(self: TriggerSkill, event: Utility.DiscussionTE,
----  target: ServerPlayer, player: ServerPlayer, data: H.GeneralRemoveData):any
+---  target: ServerPlayer, player: ServerPlayer, data: Utility.DiscussionData):any
 
 ---@class SkillSkeleton
 ---@field public addEffect fun(self: SkillSkeleton, key: Utility.DiscussionTE,
