@@ -1685,7 +1685,14 @@ Fk:addGameEvent(Utility.DiscussionEvent, nil, function (self)
 
   discussionData.opinions = {}
   for to, result in pairs(discussionData.results) do
-    discussionData.opinions[result.opinion] = (discussionData.opinions[result.opinion] or 0) + 1
+    if result.toCards then
+      for _, id in ipairs(result.toCards) do
+        local color = Fk:getCardById(id):getColorString()
+        discussionData.opinions[color] = (discussionData.opinions[color] or 0) + 1
+      end
+    else
+      discussionData.opinions[result.opinion] = (discussionData.opinions[result.opinion] or 0) + 1
+    end
   end
   logic:trigger(Utility.DiscussionResultConfirming, from, discussionData)
 
