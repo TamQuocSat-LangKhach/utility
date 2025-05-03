@@ -2433,6 +2433,30 @@ Utility.askForCardByMultiPatterns = function (player, patterns, skillName, cance
   return {}, ""
 end
 
+--- GeneralAppearData 描述和武将牌登场有关的数据
+---@class GeneralAppearDataSpec
+---@field public m General @ 主将
+---@field public d General @ 副将
+
+---@class Utility.GeneralAppearData: GeneralAppearDataSpec, TriggerData
+Utility.GeneralAppearData = TriggerData:subclass("GeneralAppearData")
+
+--- 登场TriggerEvent
+---@class Utility.GeneralAppearEvent: TriggerEvent
+---@field public data Utility.GeneralAppearData
+Utility.GeneralAppearEvent = TriggerEvent:subclass("GeneralAppearEvent")
+
+--- 登场时
+---@class Utility.GeneralAppeared: Utility.GeneralAppearEvent
+Utility.GeneralAppeared = Utility.GeneralAppearEvent:subclass("Utility.GeneralAppeared")
+
+---@alias GeneralAppearTrigFunc fun(self: TriggerSkill, event: Utility.GeneralAppearEvent,
+---  target: ServerPlayer, player: ServerPlayer, data: Utility.GeneralAppearData):any
+
+---@class SkillSkeleton
+---@field public addEffect fun(self: SkillSkeleton, key: Utility.GeneralAppearEvent,
+---  data: TrigSkelSpec<GeneralAppearTrigFunc>, attr: TrigSkelAttribute?): SkillSkeleton
+
 dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'
 
