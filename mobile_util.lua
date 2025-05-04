@@ -87,7 +87,7 @@ Fk:loadTranslationTable{
 -- 仁区相关
 
 --- 获取仁区中的牌
----@param room Room @ 房间
+---@param room Room | AbstractRoom @ 房间
 ---@return integer[]
 Utility.GetRenPile = function(room)
   local cards = room:getBanner("@$RenPile")
@@ -100,13 +100,13 @@ end
 
 
 --- 将一些牌加入仁区
----@param player Player @ 移动操作者
+---@param player ServerPlayer @ 移动操作者
 ---@param cards integer|integer[]|Card|Card[] @ 要加入仁区的牌
 ---@param skillName? string @ 移动的技能名
 Utility.AddToRenPile = function(player, cards, skillName)
   local room = player.room
   skillName = skillName or ""
-  room.logic:addTriggerSkill(Fk.skills["#RenPileTrigger"])
+  room:addSkill(Fk.skills["#RenPileTrigger"])
   local ids = Card:getIdList(cards)
 
   local movesSplitedByOwner = {}

@@ -2461,7 +2461,7 @@ dofile 'packages/utility/mobile_util.lua'
 dofile 'packages/utility/qml_mark.lua'
 
 local extension = Package:new("utility", Package.SpecialPack)
-extension:loadSkillSkels(require "packages.utility.aux_skills")
+extension:loadSkillSkelsByPath("./packages/utility/aux_skills")
 Fk:loadPackage(extension)
 
 return Utility
