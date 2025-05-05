@@ -2383,11 +2383,11 @@ Fk:loadTranslationTable{
 
 --- 从多种规则中选择一种并选牌
 ---@param player ServerPlayer @ 被询问的玩家
----@param patterns table @ 选牌规则组。格式{{规则，选牌下限，选牌上限，提示名},{},...}
+---@param patterns [string, integer, integer, string][] @ 选牌规则组。格式{{规则，选牌下限，选牌上限，提示名},{},...}
 ---@param skillName? string @ 技能名
 ---@param cancelable? boolean @ 能否点取消。默认可以
 ---@param prompt? string @ 提示信息
----@param extra_data? table @ 额外信息。可以选择"expand_pile"|"discard_skill"
+---@param extra_data? {expand_pile: string|table, discard_skill: boolean, [any]:any} @ 额外信息。可以选择"expand_pile"|"discard_skill"
 ---@return integer[], string @ 返回选择的牌，和选择的规则提示名
 Utility.askForCardByMultiPatterns = function (player, patterns, skillName, cancelable, prompt, extra_data)
   skillName = skillName or "choose_cards_mutlipat_skill"
@@ -2406,18 +2406,26 @@ Utility.askForCardByMultiPatterns = function (player, patterns, skillName, cance
     end)
   end
   local aval_cardlist = {}
+  local selecteable_patterns = {}
   for _, v in ipairs(patterns) do
-    table.insert(aval_cardlist, table.filter(aval_cards, function(cid)
+    local cards = table.filter(aval_cards, function(cid)
       return Exppattern:Parse(v[1]):match(Fk:getCardById(cid))
-    end))
+    end)
+    if #cards >= v[2] then
+      table.insert(selecteable_patterns, v)
+      table.insert(aval_cardlist, cards)
+    end
   end
-
-  if cancelable or table.find(patterns, function(v, i)
-    return #aval_cardlist[i] >= v[2] and #aval_cardlist[i] <= v[3]
-  end) then
+  if cancelable or #selecteable_patterns > 0 then
     extra_data.skillName = skillName
-    extra_data.patterns = patterns
-    local success, dat = player.room:askForUseActiveSkill(player, "choose_cards_mutlipat_skill", prompt, cancelable, extra_data)
+    extra_data.patterns = selecteable_patterns
+    extra_data.all_patterns = patterns
+    local success, dat = player.room:askToUseActiveSkill(player, {
+      skill_name = "choose_cards_mutlipat_skill",
+      prompt = prompt,
+      cancelable = cancelable,
+      extra_data = extra_data
+    })
     if dat then
       return dat.cards, dat.interaction
     elseif cancelable then
@@ -2425,13 +2433,13 @@ Utility.askForCardByMultiPatterns = function (player, patterns, skillName, cance
     end
   end
 
-  for i, v in ipairs(patterns) do
-    if #aval_cardlist[i] >= v[2] and #aval_cardlist[i] <= v[3] then
-      return aval_cardlist[i], v[4]
+  if #selecteable_patterns == 0 then
+    return {}, ""
+  else
+    for i, v in ipairs(selecteable_patterns) do
+      return table.random(aval_cardlist[i], v[2]), v[4]
     end
   end
-
-  return {}, ""
 end
 
 --- GeneralAppearData 描述和武将牌登场有关的数据

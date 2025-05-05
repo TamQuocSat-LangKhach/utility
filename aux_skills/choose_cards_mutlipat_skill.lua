@@ -11,7 +11,10 @@ choose_cards_mutlipat_skill:addEffect('active', {
   interaction = function(self, player)
     local patterns = self.patterns
     if not patterns then return end
-    return UI.ComboBox {choices = table.map(patterns, function(v, i) return v[4] end) }
+    return UI.ComboBox {
+      choices = table.map(patterns, function(v, _) return v[4] end),
+      all_choices = table.map(self.all_patterns, function(v, _) return v[4] end),
+    }
   end,
   card_filter = function(self, player, to_select, selected)
     local patterns, choice = self.patterns, self.interaction.data
