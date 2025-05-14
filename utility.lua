@@ -949,7 +949,7 @@ end
 ---@param data CardUseStruct|integer @ 当前事件的data，或需要查询的使用事件的id
 ---@return boolean
 Utility.IsUsingHandcard = function(player, data)
-  fk.qWarning("Utility.IsUsingHandcard is deprecated! Use UseCardData/RespondCardData:IsUsingHandcard instead")
+  fk.qWarning("Utility.IsUsingHandcard is deprecated! Use UseCardData/RespondCardData:isUsingHandcard instead")
   local useEvent, cards
   if type(data) == "number" then
     useEvent = player.room.logic.all_game_events[data]
