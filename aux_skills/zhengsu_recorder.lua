@@ -68,7 +68,7 @@ mobile_zhengsu_recorder:addEffect(fk.AfterCardsMove, {
     local room = player.room
     local mark = player:getTableMark("@zhengsu_mingzhi-turn")
     for _, move in ipairs(data) do
-      if move.from == player.id and move.skillName == "phase_discard" then
+      if move.from == player and move.skillName == "phase_discard" then
         for _, info in ipairs(move.moveInfo) do
           if info.fromArea == Card.PlayerHand then
             local suit = Fk:getCardById(info.cardId):getSuitString(true)
