@@ -173,7 +173,7 @@ GraphicsBox {
         text: luatr("Show General Detail")
         onClicked: {
           if (selectedSkill.length) {
-            roomScene.startCheat("../../packages/utility/qml/SkillDetail", { skills: [root.selectedSkill[0].orig] });
+            roomScene.startCheatByPath("packages/utility/qml/SkillDetail", { skills: [root.selectedSkill[0].orig] });
           } else {
             roomScene.startCheat("GeneralDetail", { generals: selectedGeneral });
           }

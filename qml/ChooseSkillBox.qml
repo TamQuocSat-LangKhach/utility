@@ -112,7 +112,7 @@ GraphicsBox {
             _skills.push(active_skills.get(i).name);
           }
         }
-        roomScene.startCheat("../../packages/utility/qml/SkillDetail", { skills: _skills });
+        roomScene.startCheatByPath("packages/utility/qml/SkillDetail", { skills: _skills });
       }
     }
   }
